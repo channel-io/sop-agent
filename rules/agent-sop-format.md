@@ -1,26 +1,15 @@
----
-description: Standard format for Agent SOPs (aligned with agent-sop)
-globs: "**/*.sop.md"
----
 # Agent SOP Format
 
-SOPs in this project use the same structure as [agent-sop](https://github.com/strands-agents/agent-sop).
+이 프로젝트의 SOP는 [agent-sop](https://github.com/strands-agents/agent-sop) 표준을 따릅니다.
 
-## Required
+## 참고 문서
 
-- File extension: `.sop.md`
-- Sections: **Overview**, **Parameters**, **Steps**
-- Steps use **Constraints** with RFC 2119 keywords (MUST, SHOULD, MAY)
+상세한 SOP 작성 규칙은 원본 문서를 참조하세요:
+- **[Agent SOP Format Specification](https://github.com/strands-agents/agent-sop/blob/main/rules/agent-sop-format.md)**
 
-## Parameter style
+## 핵심 요약
 
-- **param_name** (required): description  
-- **optional_param** (optional, default: value): description  
-
-## Steps
-
-- Each step: `### N. Step Name` + description + **Constraints:** bullet list.
-
-## Optional sections
-
-- **Examples**, **Troubleshooting**
+- **파일 확장자**: `.sop.md` (kebab-case 네이밍)
+- **필수 섹션**: Overview, Parameters, Steps
+- **RFC 2119 키워드**: MUST, SHOULD, MAY 사용
+- **권장 섹션**: Examples, Troubleshooting
