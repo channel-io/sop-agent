@@ -1,6 +1,6 @@
 ---
 description: Standard format for Agent SOPs (aligned with agent-sop)
-globs: **/*.sop.md
+globs: "**/*.sop.md"
 ---
 # Agent SOP Format
 
