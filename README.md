@@ -1,6 +1,6 @@
-# Excel-to-SOP Pipeline
+# Userchat-to-SOP Pipeline
 
-Excel 고객 상담 데이터를 Agent SOP 문서로 자동 변환하는 3단계 AI 파이프라인
+Userchat 고객 상담 데이터를 Agent SOP 문서로 자동 변환하는 3단계 AI 파이프라인
 
 ## 프로젝트 개요
 
@@ -78,10 +78,6 @@ python3 scripts/pipeline.py --input data/input.xlsx --output results
 - **클러스터링**: scikit-learn K-Means
 - **LLM**: Upstage Solar `solar-mini`
 - **데이터 처리**: pandas, numpy
-
-## 라이선스
-
-MIT
 
 ## 기여하기
 
