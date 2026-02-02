@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# Cache & temp
+*.pkl
+*.cache
+cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# Results & archives
+archive/
+results/
+!results/.gitkeep
+
+# Tests
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data (exclude outputs, keep raw)
+*.xlsx
+!raw*.xlsx
+!user_chat*.xlsx
+!칼로*.xlsx
+data/
+
+# Logs & system
+*.log
+.DS_Store
+.cursor/
+.vscode/
