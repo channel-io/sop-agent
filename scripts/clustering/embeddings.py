@@ -2,8 +2,10 @@ import numpy as np
 import pickle
 import hashlib
 import os
+import time
 from pathlib import Path
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 from ..config import (
     UPSTAGE_API_KEY,
@@ -34,21 +36,45 @@ def generate_embeddings(texts, cache_dir='cache'):
         cleaned_texts.append(text)
     
     client = OpenAI(api_key=UPSTAGE_API_KEY, base_url=UPSTAGE_BASE_URL)
-    
-    embeddings = []
+
+    def embed_batch_with_retry(batch, max_retries=3):
+        """배치 임베딩 생성 (재시도 로직 포함)"""
+        for attempt in range(max_retries):
+            try:
+                response = client.embeddings.create(
+                    model=EMBEDDING_MODEL,
+                    input=batch
+                )
+                return [item.embedding for item in response.data]
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    print(f"\n   ⚠️  배치 임베딩 실패 (시도 {attempt + 1}/{max_retries}), {wait_time}초 후 재시도...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"\n   ❌ 배치 임베딩 최종 실패: {e}")
+                    raise
+
+    # 배치 준비
     batch_size = EMBEDDING_BATCH_SIZE
-    
-    for i in tqdm(range(0, len(cleaned_texts), batch_size), desc="   Embedding"):
-        batch = cleaned_texts[i:i+batch_size]
-        
-        response = client.embeddings.create(
-            model=EMBEDDING_MODEL,
-            input=batch
-        )
-        
-        batch_embeddings = [item.embedding for item in response.data]
-        embeddings.extend(batch_embeddings)
-    
+    batches = [cleaned_texts[i:i+batch_size] for i in range(0, len(cleaned_texts), batch_size)]
+
+    # 병렬 처리 (최대 3개 동시 요청)
+    embeddings = []
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {executor.submit(embed_batch_with_retry, batch): idx
+                   for idx, batch in enumerate(batches)}
+
+        # tqdm으로 진행상황 표시
+        results = {}
+        for future in tqdm(as_completed(futures), total=len(futures), desc="   Embedding"):
+            idx = futures[future]
+            results[idx] = future.result()
+
+        # 순서대로 병합
+        for idx in sorted(results.keys()):
+            embeddings.extend(results[idx])
+
     embeddings = np.array(embeddings)
     
     with open(cache_file, 'wb') as f:
