@@ -20,52 +20,7 @@ from scripts.clustering import (
 from scripts.config import DEFAULT_K_RANGE, DEFAULT_CACHE_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_OUTPUT_PREFIX
 
 def print_header(text):
-    print("\n" + "="*70)
-    print(text)
-    print("="*70)
-
-def print_stats(df_chat, df_msg):
-    print(f"   UserChat: {len(df_chat):,}개")
-    print(f"   Message: {len(df_msg):,}개")
-
-def print_text_enhancement_stats(df_chat):
-    original_len = df_chat['summarizedMessage'].astype(str).str.len().mean()
-    enhanced_len = df_chat['enhanced_text'].astype(str).str.len().mean()
-    
-    print("\n   전략별 통계:")
-    strategy_counts = df_chat['text_strategy'].value_counts()
-    for strategy, count in strategy_counts.items():
-        pct = count / len(df_chat) * 100
-        print(f"     {strategy:12s}: {count:5d}건 ({pct:5.1f}%)")
-    
-    print("\n   텍스트 길이 비교:")
-    print(f"     원본 평균: {original_len:.0f}자")
-    print(f"     향상 평균: {enhanced_len:.0f}자")
-    print(f"     증가율: {(enhanced_len / original_len - 1) * 100:.1f}%")
-
-def print_clustering_results(best_k, results):
-    print(f"\n   테스트 K 값: {[r['n_clusters'] for r in results]}")
-    for result in results:
-        print(f"   K={result['n_clusters']:2d} → Silhouette={result['silhouette']:.3f}, "
-              f"크기:[{result['min_size']:3d}-{result['max_size']:3d}], 평균:{result['avg_size']:.0f}")
-    
-    best_result = next(r for r in results if r['n_clusters'] == best_k)
-    print(f"\n   ✅ 선택: K={best_k} (Silhouette={best_result['silhouette']:.3f})")
-    print(f"   클러스터 크기: 최소 {best_result['min_size']}건, 최대 {best_result['max_size']}건")
-
-def print_tagging_results(tags_df, df_chat):
-    print("\n" + "="*70)
-    print("📊 클러스터 태깅 결과")
-    print("="*70)
-    print(tags_df[['cluster_id', 'cluster_size', 'label', 'category']].to_string(index=False))
-    
-    print("\n" + "="*70)
-    print("📈 카테고리별 분포")
-    print("="*70)
-    category_dist = tags_df.groupby('category')['cluster_size'].sum().sort_values(ascending=False)
-    for category, count in category_dist.items():
-        pct = count / len(df_chat) * 100
-        print(f"   {category:10s}: {count:3d}건 ({pct:5.1f}%)")
+    print(f"\n{text}")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -101,33 +56,29 @@ def main():
     else:
         sample_size = 1000  # Default: 1000
 
-    print_header("🎯 Customer Support Chat Clustering Pipeline")
+    print_header("🎯 Userchat-to-SOP Pipeline")
     print(f"   입력: {args.input}")
-    print(f"   샘플: {sample_size if sample_size else '전체'}")
-    print(f"   출력: {args.output}/{args.prefix}_*.xlsx")
+    print(f"   샘플: {sample_size if sample_size else '전체'}개")
 
-    print_header("1️⃣ 데이터 로딩")
+    print_header("1️⃣ 데이터 로딩...")
     df_chat, df_msg = load_data(args.input, sample_size)
-    print_stats(df_chat, df_msg)
-    if sample_size:
-        print(f"   샘플링: {sample_size:,}개")
-    
-    print_header("2️⃣ 텍스트 향상")
+    print(f"   UserChat: {len(df_chat):,}개, Message: {len(df_msg):,}개")
+
+    print_header("2️⃣ 텍스트 향상...")
     df_chat = enhance_text(df_chat, df_msg)
-    print_text_enhancement_stats(df_chat)
-    
-    print_header("3️⃣ 임베딩 생성")
+    print(f"   완료")
+
+    print_header("3️⃣ 임베딩 생성...")
     texts = df_chat['enhanced_text'].tolist()
     embeddings = generate_embeddings(texts, cache_dir=args.cache_dir)
-    print(f"   생성 완료: {embeddings.shape}")
-    
-    print_header("4️⃣ K-Means 클러스터링")
+    print(f"   완료: {embeddings.shape}")
+
+    print_header("4️⃣ K-Means 클러스터링...")
     if args.k and args.k != 'auto':
         # Fixed K value
         k_value = int(args.k)
-        print(f"\n   K={k_value} (고정)")
         labels, silhouette = cluster_data(embeddings, k_value)
-        print(f"   Silhouette Score: {silhouette:.3f}")
+        print(f"   K={k_value}, Silhouette={silhouette:.3f}")
     else:
         # Auto: find optimal K
         k_range = None
@@ -137,14 +88,15 @@ def main():
             k_range = DEFAULT_K_RANGE
 
         best_k, labels, results = find_optimal_k(embeddings, k_range)
-        print_clustering_results(best_k, results)
-    
+        best_result = next(r for r in results if r['n_clusters'] == best_k)
+        print(f"   선택: K={best_k}, Silhouette={best_result['silhouette']:.3f}")
+
     df_chat['cluster_id'] = labels
 
     # Tagging step (conditional)
     if args.tagging_mode == 'skip':
-        print_header("5️⃣ LLM 태깅")
-        print("   ⏭️  Tagging skipped (use /tag-clusters-manual in Claude Code for manual tagging)")
+        print_header("5️⃣ LLM 태깅...")
+        print("   건너뜀 (수동 태깅 필요)")
 
         # Create placeholder tags
         df_chat['label'] = '[Unlabeled]'
@@ -159,14 +111,19 @@ def main():
             'keywords': [''] * df_chat['cluster_id'].nunique()
         })
     else:
-        print_header(f"5️⃣ LLM 태깅 ({args.tagging_mode} 방식)")
+        print_header(f"5️⃣ LLM 태깅...")
         tags_df = tag_clusters(df_chat, mode=args.tagging_mode)
-        print_tagging_results(tags_df, df_chat)
 
-    print_header("6️⃣ 결과 저장")
+        # 간단한 요약만 출력
+        category_dist = tags_df.groupby('category')['cluster_size'].sum().sort_values(ascending=False)
+        top_categories = [f"{cat}({count/len(df_chat)*100:.1f}%)"
+                         for cat, count in category_dist.head(3).items()]
+        print(f"   완료: {len(tags_df)}개 클러스터 - {', '.join(top_categories)}")
+
+    print_header("6️⃣ 결과 저장...")
     result_file, tags_file = save_results(df_chat, tags_df, args.output, args.prefix)
-    print(f"   ✅ {tags_file}")
     print(f"   ✅ {result_file}")
+    print(f"   ✅ {tags_file}")
 
     # Save message data for sampled chats
     messages_file = save_messages(df_chat, df_msg, args.output, args.prefix)
