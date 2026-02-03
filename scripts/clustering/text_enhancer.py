@@ -12,16 +12,17 @@ def enhance_text(df_chat, df_msg):
     
     for idx, row in tqdm(df_chat.iterrows(), total=len(df_chat), desc="   Processing"):
         chat_id = row['id']
-        summary = str(row.get('summarizedMessage', ''))
-        
-        if len(summary) >= TEXT_STRATEGY_MIN_SUMMARY_LENGTH and summary != 'nan':
-            enhanced_texts.append(summary)
+        raw_summary = row.get('summarizedMessage', None)
+        summary = raw_summary
+
+        if pd.notna(raw_summary) and len(str(raw_summary)) >= TEXT_STRATEGY_MIN_SUMMARY_LENGTH:
+            enhanced_texts.append(str(raw_summary))
             strategy_used.append('summary')
         else:
             messages = df_msg[df_msg['chatId'] == chat_id]['plainText'].astype(str).tolist()
             
             if len(messages) == 0:
-                enhanced_texts.append(summary if summary != 'nan' else '')
+                enhanced_texts.append(str(summary) if pd.notna(summary) else '')
                 strategy_used.append('empty')
             elif len(str(messages[0])) >= TEXT_STRATEGY_MIN_FIRST_MSG_LENGTH:
                 enhanced_texts.append(str(messages[0]))

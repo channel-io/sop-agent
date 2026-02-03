@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from openai import OpenAI
+from openai import OpenAI # pyright: ignore[reportMissingImports]
 from ..config import (
     UPSTAGE_API_KEY,
     UPSTAGE_BASE_URL,
@@ -14,10 +14,12 @@ from ..config import (
     EMBEDDING_BATCH_SIZE
 )
 
+# 캐시 키 생성
 def get_cache_key(texts, model_name):
     text_hash = hashlib.md5(''.join(texts).encode()).hexdigest()
     return f"{model_name}_{text_hash}_{len(texts)}"
 
+# 임베딩 생성 및 캐싱
 def generate_embeddings(texts, cache_dir='cache'):
     os.makedirs(cache_dir, exist_ok=True)
     cache_key = get_cache_key(texts, EMBEDDING_MODEL)
@@ -65,11 +67,14 @@ def generate_embeddings(texts, cache_dir='cache'):
         futures = {executor.submit(embed_batch_with_retry, batch): idx
                    for idx, batch in enumerate(batches)}
 
-        # tqdm으로 진행상황 표시
+        # 진행상황 표시
         results = {}
         for future in tqdm(as_completed(futures), total=len(futures), desc="   Embedding"):
             idx = futures[future]
-            results[idx] = future.result()
+            try:
+                results[idx] = future.result()
+            except Exception as e:
+                raise RuntimeError(f"배치 {idx} 임베딩 실패 - 전체 작업 중단") from e
 
         # 순서대로 병합
         for idx in sorted(results.keys()):

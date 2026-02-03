@@ -9,12 +9,14 @@ from ..config import (
     LLM_SAMPLES_PER_CLUSTER
 )
 
+# 나눠진 군집들을 태깅
 def tag_clusters(df, mode='agent', llm_model=None, samples_per_cluster=None):
     if mode == 'agent':
         return _tag_with_agent(df, llm_model, samples_per_cluster)
     else:
         return _tag_with_api(df, llm_model, samples_per_cluster)
 
+# upstage API 방식으로 태깅
 def _tag_with_api(df, llm_model=None, samples_per_cluster=None):
     if llm_model is None:
         llm_model = LLM_MODEL
@@ -126,10 +128,11 @@ def _tag_with_agent(df, llm_model=None, samples_per_cluster=None):
 JSON만 출력하세요 (추가 설명 없이)."""
 
     try:
+        temp = LLM_TEMPERATURE if LLM_TEMPERATURE is not None else 0.0
         response = client.chat.completions.create(
-            model="solar-pro",
+            model=llm_model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+            temperature=temp
         )
         
         result_text = response.choices[0].message.content.strip()

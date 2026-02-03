@@ -16,7 +16,7 @@ def save_results(df, tags_df, output_dir='results', prefix='output'):
 
 def save_messages(df_chat, df_msg, output_dir='results', prefix='output'):
     """
-    Save message data for sampled UserChats to CSV
+    샘플링된 유저챗 데이터와 해당하는 메시지 데이터를 CSV로 저장합니다.
 
     Args:
         df_chat: UserChat DataFrame (with cluster_id)
@@ -35,7 +35,7 @@ def save_messages(df_chat, df_msg, output_dir='results', prefix='output'):
     # Filter messages for sampled chats
     # Check column name (might be 'userChatId' or 'chatId')
     id_col = 'userChatId' if 'userChatId' in df_msg.columns else 'chatId'
-    sample_messages = df_msg[df_msg[id_col].isin(sample_chat_ids)]
+    sample_messages = df_msg[df_msg[id_col].isin(sample_chat_ids)].copy()
 
     # Add cluster_id for convenience
     # Create mapping: chat_id -> cluster_id
