@@ -1,133 +1,134 @@
-# Clustering UserChat Data
+# 고객 상담 데이터 클러스터링 가이드
 
-## Overview
-This SOP guides the automated clustering and tagging of customer support chat data. It processes Korean customer service conversations through a complete pipeline: data preprocessing, text enhancement, embedding generation (Upstage Solar), K-Means clustering, LLM-based tagging, and structured output generation.
+## 개요
 
-**Use Cases:**
-- Analyzing large volumes (1000+) of customer support chat logs
-- Automatically categorizing customer inquiries by topic
-- Identifying common patterns in customer service interactions
-- Generating industry-specific category taxonomies
-- Preparing data for SOP (Standard Operating Procedure) extraction
+이 SOP는 고객 상담 채팅 데이터의 자동 클러스터링 및 태깅을 안내합니다. 한국어 고객 서비스 대화를 완전한 파이프라인으로 처리합니다: 데이터 전처리, 텍스트 향상, 임베딩 생성(Upstage Solar), K-Means 클러스터링, LLM 기반 태깅, 구조화된 출력 생성.
 
-**Key Features:**
-- 3-level text enhancement fallback strategy
-- Automatic embedding caching (4096-dimensional vectors)
-- Silhouette score-based optimal cluster selection
-- Two tagging modes: API (fast) or Claude manual (high-quality)
-- Industry-adaptive category generation
+**활용 사례:**
+- 대량(1000건 이상)의 고객 상담 채팅 로그 분석
+- 고객 문의를 주제별로 자동 분류
+- 고객 서비스 상호작용의 일반적인 패턴 식별
+- 업종별 카테고리 분류 체계 생성
+- SOP(표준 운영 절차) 추출을 위한 데이터 준비
 
-## Parameters
+**주요 기능:**
+- 3단계 텍스트 향상 폴백 전략
+- 자동 임베딩 캐싱 (4096차원 벡터)
+- Silhouette 점수 기반 최적 클러스터 수 선택
+- 두 가지 태깅 모드: API(빠름) 또는 Claude 수동(고품질)
+- 업종 적응형 카테고리 생성
 
-### Required
-- **input_file**: Path to Excel file containing UserChat data
-  - Must have "UserChat data" sheet with chat metadata
-  - Must have "Message data" sheet with conversation messages
-  - Format: `.xlsx` file
+## 파라미터
 
-### Optional
-- **sample_size** (default: 1000): Number of records to process
-  - Use 1000 for standard analysis (recommended default)
-  - Use "all" for complete dataset (only if explicitly needed)
-  - Note: 1000 records is sufficient for most clustering tasks
+### 필수
+- **input_file**: UserChat 데이터가 포함된 Excel 파일 경로
+  - "UserChat data" 시트(채팅 메타데이터 포함) 필수
+  - "Message data" 시트(대화 메시지 포함) 필수
+  - 형식: `.xlsx` 파일
 
-- **tagging_mode** (default: "agent"): Cluster tagging method
-  - `"agent"`: Fast Solar-pro unified tagging (5-15 sec, industry-adaptive, recommended)
-  - `"api"`: Solar-mini independent tagging (30 sec, hardcoded categories)
-  - `"skip"`: Skip tagging, use `/tag-clusters-manual` skill for highest quality
-  
-- **k** (default: "auto"): Number of clusters
-  - `"auto"`: Automatically select optimal K via silhouette score
-  - Integer value: Use fixed cluster count
-  
-- **k_range** (default: "8,10,12,15,20,25"): K values to test when k="auto"
-  - Comma-separated list of integers
-  - Only used when k="auto"
+### 선택
+- **sample_size** (기본값: 1000): 처리할 레코드 수
+  - 표준 분석에는 1000 사용 (권장 기본값)
+  - 전체 데이터셋이 명시적으로 필요한 경우에만 "all" 사용
+  - 참고: 대부분의 클러스터링 작업에는 1000개 레코드로 충분
 
-- **output_dir** (default: "results"): Output directory path
-- **prefix** (default: "output"): Filename prefix for outputs
-- **cache_dir** (default: "cache"): Embedding cache directory
+- **tagging_mode** (기본값: "agent"): 클러스터 태깅 방법
+  - `"agent"`: 빠른 Solar-pro 통합 태깅 (5-15초, 업종 적응형, 권장)
+  - `"api"`: Solar-mini 독립 태깅 (30초, 하드코딩된 카테고리)
+  - `"skip"`: 태깅 건너뛰기, 최고 품질을 위해 `/tag-clusters-manual` 스킬 사용
 
-## Steps
+- **k** (기본값: "auto"): 클러스터 수
+  - `"auto"`: Silhouette 점수를 통해 최적 K 자동 선택
+  - 정수 값: 고정 클러스터 수 사용
 
-### 1. Data Loading & Validation
+- **k_range** (기본값: "8,10,12,15,20,25"): k="auto"일 때 테스트할 K 값들
+  - 쉼표로 구분된 정수 목록
+  - k="auto"일 때만 사용됨
 
-Load Excel data and validate structure.
+- **output_dir** (기본값: "results"): 출력 디렉토리 경로
+- **prefix** (기본값: "output"): 출력 파일명 접두사
+- **cache_dir** (기본값: "cache"): 임베딩 캐시 디렉토리
 
-**Constraints:**
-- You MUST validate presence of "UserChat data" and "Message data" sheets
-- You MUST check for required columns: `id`, `summarizedMessage` (if available), messages
-- You SHOULD report data statistics (total records, date range, companies)
-- You MAY skip records with missing critical data
-- You MUST NOT proceed if sheets are missing
+## 단계별 프로세스
 
-**Tools Required:**
-- `pandas` for Excel reading
-- `openpyxl` engine for .xlsx files
+### 1. 데이터 로딩 및 검증
 
-**Expected Output:**
+Excel 데이터를 로드하고 구조를 검증합니다.
+
+**제약 조건:**
+- "UserChat data" 및 "Message data" 시트 존재 여부 반드시 검증
+- 필수 컬럼 확인: `id`, `summarizedMessage` (있는 경우), messages
+- 데이터 통계 보고 권장 (총 레코드 수, 날짜 범위, 회사)
+- 필수 데이터가 누락된 레코드는 건너뛸 수 있음
+- 시트가 누락되면 진행 불가
+
+**필요 도구:**
+- Excel 읽기용 `pandas`
+- .xlsx 파일용 `openpyxl` 엔진
+
+**예상 출력:**
 ```
-Loaded 1,645 records from Meliens
-Date range: 2024-01-01 to 2024-12-31
-Columns found: id, userId, summarizedMessage, ...
+Meliens에서 1,645개 레코드 로드됨
+날짜 범위: 2024-01-01 ~ 2024-12-31
+발견된 컬럼: id, userId, summarizedMessage, ...
 ```
 
-### 2. Text Enhancement
+### 2. 텍스트 향상
 
-Enhance text quality using 3-level fallback strategy.
+3단계 폴백 전략을 사용하여 텍스트 품질을 향상시킵니다.
 
-**Constraints:**
-- You MUST apply the following priority:
-  1. If `summarizedMessage` exists and ≥ 50 chars → Use it
-  2. Else if `first_message` ≥ 20 chars → Use first message
-  3. Else → Combine 3 turns (6 messages total)
-- You MUST track which strategy was used per record (store in `text_strategy` column)
-- You SHOULD clean text: remove extra whitespace, handle NaN values
-- You MAY apply additional preprocessing (lowercasing, normalization) if needed
-- You MUST NOT use empty strings (mark as NaN instead)
+**제약 조건:**
+- 다음 우선순위를 반드시 적용:
+  1. `summarizedMessage`가 존재하고 50자 이상이면 → 사용
+  2. 그렇지 않고 `first_message`가 20자 이상이면 → 첫 메시지 사용
+  3. 그 외 → 3턴(총 6개 메시지) 결합
+- 레코드별로 어떤 전략을 사용했는지 추적 (`text_strategy` 컬럼에 저장)
+- 텍스트 정리 권장: 여분의 공백 제거, NaN 값 처리
+- 필요시 추가 전처리 적용 가능 (소문자화, 정규화)
+- 빈 문자열 사용 금지 (대신 NaN으로 표시)
 
-**Text Enhancement Logic:**
+**텍스트 향상 로직:**
 ```python
 def enhance_text(row, messages_df):
-    # Strategy 1: summarizedMessage
+    # 전략 1: summarizedMessage
     if row['summarizedMessage'] and len(row['summarizedMessage']) >= 50:
         return row['summarizedMessage'], 'summary'
-    
-    # Strategy 2: first_message
+
+    # 전략 2: first_message
     user_messages = messages_df[messages_df['chatId'] == row['id']]
     if not user_messages.empty:
         first_msg = user_messages.iloc[0]['content']
         if len(first_msg) >= 20:
             return first_msg, 'first_message'
-    
-    # Strategy 3: combine 3 turns (6 messages)
+
+    # 전략 3: 3턴(6개 메시지) 결합
     combined = ' '.join(user_messages['content'].head(6).tolist())
     return combined, 'combined_turns'
 ```
 
-**Expected Output:**
-- New column: `enhanced_text` (enhanced text)
-- New column: `text_strategy` (strategy used)
-- Statistics: "93.9% used summary, 2.5% used first_message, 3.6% combined turns"
+**예상 출력:**
+- 새 컬럼: `enhanced_text` (향상된 텍스트)
+- 새 컬럼: `text_strategy` (사용된 전략)
+- 통계: "93.9%가 summary 사용, 2.5%가 first_message 사용, 3.6%가 결합 턴 사용"
 
-### 3. Embedding Generation
+### 3. 임베딩 생성
 
-Generate 4096-dimensional embeddings using Upstage Solar API with automatic caching.
+자동 캐싱과 함께 Upstage Solar API를 사용하여 4096차원 임베딩을 생성합니다.
 
-**Constraints:**
-- You MUST use Upstage Solar `embedding-passage` model
-- You MUST check cache before generating embeddings (cache key: model_texthash_samplesize)
-- You MUST batch API calls (recommended: 100 texts per batch)
-- You SHOULD show progress (e.g., "Embedding batch 1/10...")
-- You MAY retry failed API calls up to 3 times
-- You MUST save embeddings to cache after generation
-- You MUST NOT embed empty or NaN texts (filter them out first)
+**제약 조건:**
+- Upstage Solar `embedding-passage` 모델 반드시 사용
+- 임베딩 생성 전 캐시 확인 필수 (캐시 키: model_texthash_samplesize)
+- API 호출 배치 처리 필수 (권장: 배치당 100개 텍스트)
+- 진행 상황 표시 권장 (예: "임베딩 배치 1/10...")
+- 실패한 API 호출은 최대 3회까지 재시도 가능
+- 생성 후 임베딩을 캐시에 저장 필수
+- 빈 텍스트나 NaN 텍스트는 임베딩 금지 (먼저 필터링)
 
-**API Configuration:**
+**API 설정:**
 ```python
 import requests
 
-UPSTAGE_API_KEY = "up_..."  # Load from config.py
+UPSTAGE_API_KEY = "up_..."  # config.py에서 로드
 EMBEDDING_MODEL = "embedding-passage"
 API_URL = "https://api.upstage.ai/v1/solar/embeddings"
 
@@ -137,7 +138,7 @@ headers = {
 }
 ```
 
-**Caching Mechanism:**
+**캐싱 메커니즘:**
 ```python
 import pickle
 import hashlib
@@ -154,25 +155,25 @@ def load_embeddings_cache(cache_key, cache_dir="cache"):
     return None
 ```
 
-**Expected Output:**
-- Numpy array of shape (N, 4096)
-- Cache file saved: `cache/embeddings_embedding-passage_abc123_1000.pkl`
-- Time report: "Generated 1000 embeddings in 45 seconds" or "Loaded from cache in 2 seconds"
+**예상 출력:**
+- 형태가 (N, 4096)인 Numpy 배열
+- 저장된 캐시 파일: `cache/embeddings_embedding-passage_abc123_1000.pkl`
+- 시간 보고: "45초 만에 1000개 임베딩 생성" 또는 "2초 만에 캐시에서 로드"
 
-### 4. K-Means Clustering
+### 4. K-Means 클러스터링
 
-Perform K-Means clustering with optimal K selection.
+최적 K 선택과 함께 K-Means 클러스터링을 수행합니다.
 
-**Constraints:**
-- You MUST normalize embeddings before clustering (if not already normalized)
-- If k="auto": You MUST test all K values in k_range and select best via silhouette score
-- If k is integer: You MUST use that K directly
-- You MUST assign cluster IDs (0 to K-1) to all records
-- You SHOULD calculate cluster sizes and report distribution
-- You MAY initialize with k-means++ for better convergence
-- You MUST NOT use clustering algorithms other than K-Means (requirement from analysis)
+**제약 조건:**
+- 클러스터링 전 임베딩 정규화 필수 (아직 정규화되지 않은 경우)
+- k="auto"인 경우: k_range의 모든 K 값을 테스트하고 Silhouette 점수로 최적값 선택 필수
+- k가 정수인 경우: 해당 K를 직접 사용 필수
+- 모든 레코드에 클러스터 ID (0부터 K-1) 할당 필수
+- 클러스터 크기 계산 및 분포 보고 권장
+- 더 나은 수렴을 위해 k-means++로 초기화 가능
+- K-Means 이외의 클러스터링 알고리즘 사용 금지 (분석 요구사항)
 
-**Silhouette Score Calculation:**
+**Silhouette 점수 계산:**
 ```python
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
@@ -180,50 +181,50 @@ from sklearn.metrics import silhouette_score
 def find_optimal_k(embeddings, k_range=[8, 10, 12, 15, 20, 25]):
     best_k = k_range[0]
     best_score = -1
-    
+
     for k in k_range:
         kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
         labels = kmeans.fit_predict(embeddings)
         score = silhouette_score(embeddings, labels, sample_size=min(10000, len(embeddings)))
-        
+
         print(f"K={k}: Silhouette={score:.3f}")
         if score > best_score:
             best_score = score
             best_k = k
-    
+
     return best_k, best_score
 ```
 
-**Expected Output:**
-- New column: `cluster_id` (0 to K-1)
-- New column: `cluster_size` (number of records in cluster)
-- Report: "Optimal K=20, Silhouette Score=0.064"
-- Cluster distribution table
+**예상 출력:**
+- 새 컬럼: `cluster_id` (0부터 K-1)
+- 새 컬럼: `cluster_size` (클러스터 내 레코드 수)
+- 보고: "최적 K=20, Silhouette 점수=0.064"
+- 클러스터 분포 테이블
 
-### 5. Cluster Tagging
+### 5. 클러스터 태깅
 
-Tag each cluster with label, category, and keywords using LLM.
+LLM을 사용하여 각 클러스터에 라벨, 카테고리, 키워드를 태깅합니다.
 
-**Constraints:**
-- You MUST choose ONE of two tagging modes based on `tagging_mode` parameter
-- For BOTH modes: You MUST generate label, category, keywords for each cluster
-- **You MUST generate all output fields (label, category, keywords, description) in KOREAN**
-- Use Korean for all text fields (e.g., "AS_접수", "일반_상담", "충전기", "보풀제거기")
-- You SHOULD extract 5 representative samples per cluster for analysis
-- You MAY truncate very long texts (>200 chars) for display
-- You MUST NOT create "기타" (other) category unless truly necessary
+**제약 조건:**
+- `tagging_mode` 파라미터에 따라 두 가지 태깅 모드 중 하나를 반드시 선택
+- 두 모드 모두: 각 클러스터에 대해 라벨, 카테고리, 키워드 생성 필수
+- **모든 출력 필드(라벨, 카테고리, 키워드, 설명)는 반드시 한국어로 생성**
+- 모든 텍스트 필드는 한국어 사용 (예: "AS_접수", "일반_상담", "충전기", "보풀제거기")
+- 분석을 위해 클러스터당 대표 샘플 5개 추출 권장
+- 매우 긴 텍스트(200자 이상)는 표시용으로 잘라낼 수 있음
+- 정말 필요한 경우가 아니면 "기타" 카테고리 생성 금지
 
-#### Mode A: API Tagging (tagging_mode="api")
+#### 모드 A: API 태깅 (tagging_mode="api")
 
-**Constraints:**
-- You MUST use Solar-mini API for fast tagging
-- You MUST tag each cluster independently
-- **You MUST use Korean for all output fields in the API prompt**
-- You SHOULD use hardcoded categories: ["구매", "배송", "AS", "취소", "견적", "기타"]
-- Expected time: ~30 seconds for 20 clusters
-- Expected cost: ~$0.01 per 1000 records
+**제약 조건:**
+- 빠른 태깅을 위해 Solar-mini API 반드시 사용
+- 각 클러스터를 독립적으로 태깅 필수
+- **API 프롬프트의 모든 출력 필드에 한국어 반드시 사용**
+- 하드코딩된 카테고리 사용 권장: ["구매", "배송", "AS", "취소", "견적", "기타"]
+- 예상 시간: 20개 클러스터에 약 30초
+- 예상 비용: 1000개 레코드당 약 $0.01
 
-**API Prompt Template:**
+**API 프롬프트 템플릿:**
 ```python
 prompt = f"""
 다음은 고객 상담 채팅 클러스터의 샘플입니다:
@@ -239,27 +240,27 @@ prompt = f"""
 """
 ```
 
-#### Mode B: Claude Manual Tagging (tagging_mode="claude_manual")
+#### 모드 B: Claude 수동 태깅 (tagging_mode="claude_manual")
 
-**Constraints:**
-- You MUST analyze all clusters holistically (not independently)
-- You MUST auto-generate industry-specific categories (not hardcoded)
-- **You MUST generate all tags (label, category, keywords, description) in KOREAN**
-- All output fields MUST be in Korean (e.g., label="충전_AS", category="A/S", keywords=["충전기", "케이블"])
-- You MUST identify special cases (empty data, internal tickets)
-- You SHOULD provide detailed descriptions for each cluster
-- You MAY create custom categories beyond standard ones
-- Expected time: ~2-3 minutes per 10 clusters
-- Expected cost: Higher (Claude API tokens)
+**제약 조건:**
+- 모든 클러스터를 전체적으로 분석 필수 (독립적으로 아님)
+- 업종별 카테고리 자동 생성 필수 (하드코딩 아님)
+- **모든 태그(라벨, 카테고리, 키워드, 설명)를 반드시 한국어로 생성**
+- 모든 출력 필드는 한국어 필수 (예: label="충전_AS", category="A/S", keywords=["충전기", "케이블"])
+- 특수 케이스(빈 데이터, 내부 티켓) 식별 필수
+- 각 클러스터에 대한 상세 설명 제공 권장
+- 표준 카테고리 외에 사용자 정의 카테고리 생성 가능
+- 예상 시간: 10개 클러스터당 약 2-3분
+- 예상 비용: 더 높음 (Claude API 토큰)
 
-**Manual Analysis Process:**
+**수동 분석 프로세스:**
 ```python
-# 1. Extract samples from all clusters
+# 1. 모든 클러스터에서 샘플 추출
 for cluster_id in range(K):
     samples = df[df['cluster_id'] == cluster_id]['enhanced_text'].dropna().head(5)
-    print(f"Cluster {cluster_id}: {samples}")
+    print(f"클러스터 {cluster_id}: {samples}")
 
-# 2. Claude analyzes patterns and creates tags (in Korean)
+# 2. Claude가 패턴을 분석하고 태그 생성 (한국어로)
 manual_tags = {
     0: {
         'label': '제품_문의',
@@ -276,7 +277,7 @@ manual_tags = {
     # ... 각 클러스터에 대해
 }
 
-# 3. Apply tags to dataframe
+# 3. 데이터프레임에 태그 적용
 for cluster_id, tags in manual_tags.items():
     mask = df['cluster_id'] == cluster_id
     df.loc[mask, 'label'] = tags['label']
@@ -284,84 +285,84 @@ for cluster_id, tags in manual_tags.items():
     df.loc[mask, 'keywords'] = str(tags['keywords'])
 ```
 
-**Quality Checks:**
-- Verify 0% "기타" rate for well-defined industries
-- Check for system anomalies (empty data, internal tickets)
-- Ensure categories are industry-specific
-- Verify all output fields are in Korean
+**품질 검사:**
+- 잘 정의된 업종에서 0% "기타" 비율 확인
+- 시스템 이상 확인 (빈 데이터, 내부 티켓)
+- 카테고리가 업종별로 적합한지 확인
+- 모든 출력 필드가 한국어인지 확인
 
-**Expected Output:**
-- New column: `label` (cluster label)
-- New column: `category` (high-level category)
-- New column: `keywords` (list of keywords as string)
-- Tag summary table showing distribution
+**예상 출력:**
+- 새 컬럼: `label` (클러스터 라벨)
+- 새 컬럼: `category` (상위 카테고리)
+- 새 컬럼: `keywords` (문자열로 된 키워드 목록)
+- 분포를 보여주는 태그 요약 테이블
 
-### 6. Output Generation
+### 6. 출력 생성
 
-Save results in two Excel files with comprehensive data.
+포괄적인 데이터와 함께 두 개의 Excel 파일로 결과를 저장합니다.
 
-**Constraints:**
-- You MUST generate two output files:
-  1. `{prefix}_clustered.xlsx`: Full dataset with all columns + cluster data
-  2. `{prefix}_tags.xlsx`: Cluster summary with metadata
-- You MUST include all original columns in clustered file
-- You MUST use `openpyxl` engine for Excel writing
-- You SHOULD create output directory if it doesn't exist
-- You MAY add timestamp to filenames for versioning
-- You MUST NOT overwrite existing files without warning
+**제약 조건:**
+- 두 개의 출력 파일 생성 필수:
+  1. `{prefix}_clustered.xlsx`: 모든 컬럼 + 클러스터 데이터가 포함된 전체 데이터셋
+  2. `{prefix}_tags.xlsx`: 메타데이터가 포함된 클러스터 요약
+- 클러스터링된 파일에 모든 원본 컬럼 포함 필수
+- Excel 쓰기에 `openpyxl` 엔진 사용 필수
+- 출력 디렉토리가 없으면 생성 권장
+- 버전 관리를 위해 파일명에 타임스탬프 추가 가능
+- 경고 없이 기존 파일 덮어쓰기 금지
 
-**Output File 1: `{prefix}_clustered.xlsx`**
+**출력 파일 1: `{prefix}_clustered.xlsx`**
 
-Columns:
-- All original columns from input Excel
-- `enhanced_text`: Enhanced text used for clustering
-- `text_strategy`: Strategy used (summary|first_message|combined_turns)
-- `cluster_id`: Cluster ID (0 to K-1)
-- `cluster_size`: Number of records in this cluster
-- `label`: Cluster label (e.g., "AS_접수")
-- `category`: High-level category (e.g., "A/S")
-- `keywords`: Comma-separated keywords
+컬럼:
+- 입력 Excel의 모든 원본 컬럼
+- `enhanced_text`: 클러스터링에 사용된 향상된 텍스트
+- `text_strategy`: 사용된 전략 (summary|first_message|combined_turns)
+- `cluster_id`: 클러스터 ID (0부터 K-1)
+- `cluster_size`: 이 클러스터의 레코드 수
+- `label`: 클러스터 라벨 (예: "AS_접수")
+- `category`: 상위 카테고리 (예: "A/S")
+- `keywords`: 쉼표로 구분된 키워드
 
-**Output File 2: `{prefix}_tags.xlsx`**
+**출력 파일 2: `{prefix}_tags.xlsx`**
 
-Columns:
-- `cluster_id`: Cluster ID
-- `label`: Cluster label
-- `category`: High-level category
-- `keywords`: Comma-separated keywords
-- `description`: Detailed description (if available)
-- `count`: Number of records in cluster
-- `percentage`: Percentage of total records
-- `representative_samples`: Top 3 samples (optional)
+컬럼:
+- `cluster_id`: 클러스터 ID
+- `label`: 클러스터 라벨
+- `category`: 상위 카테고리
+- `keywords`: 쉼표로 구분된 키워드
+- `description`: 상세 설명 (있는 경우)
+- `count`: 클러스터 내 레코드 수
+- `percentage`: 전체 레코드 중 비율
+- `representative_samples`: 상위 3개 샘플 (선택사항)
 
-**File Saving:**
+**파일 저장:**
 ```python
 import os
 import pandas as pd
 
-# Create output directory
+# 출력 디렉토리 생성
 os.makedirs(output_dir, exist_ok=True)
 
-# Save clustered data
+# 클러스터링된 데이터 저장
 output_path_clustered = f"{output_dir}/{prefix}_clustered.xlsx"
 df.to_excel(output_path_clustered, index=False, engine='openpyxl')
 
-# Save tag summary
+# 태그 요약 저장
 output_path_tags = f"{output_dir}/{prefix}_tags.xlsx"
 tag_summary_df.to_excel(output_path_tags, index=False, engine='openpyxl')
 
-print(f"✅ Results saved:")
+print(f"✅ 결과 저장 완료:")
 print(f"  - {output_path_clustered}")
 print(f"  - {output_path_tags}")
 ```
 
-**Expected Output:**
+**예상 출력:**
 ```
-✅ Results saved:
+✅ 결과 저장 완료:
   - results/meliens_claude_manual/meliens_claude_manual_clustered.xlsx
   - results/meliens_claude_manual/meliens_claude_manual_tags.xlsx
 
-Category Distribution:
+카테고리 분포:
   A/S: 790건 (48.0%)
   일반_상담: 318건 (19.3%)
   배송: 196건 (11.9%)
@@ -369,17 +370,11 @@ Category Distribution:
   주문관리: 170건 (10.3%)
 ```
 
-**Note:** See `sops/examples/` directory for actual example files:
-- `text_enhancement_example.xlsx` - Text preprocessing demonstration (15 records)
-- `meliens_claude_manual_clustered.xlsx` - Full pipeline result (1,645 records)
-- `meliens_claude_manual_tags.xlsx` - Cluster summary (10 clusters)
-- `README.md` - Detailed explanation of each file
+## 사용 예시
 
-## Examples
+### 예시 1: 샘플링을 통한 빠른 분석
 
-### Example 1: Quick Analysis with Sampling
-
-**Input:**
+**입력:**
 ```bash
 python3 scripts/pipeline.py \
   --input data/user_chat_assacom.xlsx \
@@ -389,25 +384,25 @@ python3 scripts/pipeline.py \
   --prefix assacom_test
 ```
 
-**Expected Execution:**
-1. Load 1000 sampled records from Assacom
-2. Enhance text (3-level fallback)
-3. Generate embeddings (cached if available)
-4. Auto-select optimal K (test 8,10,12,15,20,25)
-5. Tag clusters using Solar-mini API (~30 sec)
-6. Save results
+**예상 실행:**
+1. Assacom에서 1000개 샘플 레코드 로드
+2. 텍스트 향상 (3단계 폴백)
+3. 임베딩 생성 (캐시 있으면 로드)
+4. 최적 K 자동 선택 (8,10,12,15,20,25 테스트)
+5. Solar-mini API로 클러스터 태깅 (약 30초)
+6. 결과 저장
 
-**Output Files:**
-- `results/assacom_sample/assacom_test_clustered.xlsx` (1000 rows)
-- `results/assacom_sample/assacom_test_tags.xlsx` (K rows, e.g., 20)
+**출력 파일:**
+- `results/assacom_sample/assacom_test_clustered.xlsx` (1000행)
+- `results/assacom_sample/assacom_test_tags.xlsx` (K행, 예: 20)
 
-**Performance:**
-- Time: ~2 minutes (1 min embedding + 30 sec tagging + 30 sec processing)
-- Cost: ~$0.06 ($0.05 embedding + $0.01 tagging)
+**성능:**
+- 시간: 약 2분 (임베딩 1분 + 태깅 30초 + 처리 30초)
+- 비용: 약 $0.06 (임베딩 $0.05 + 태깅 $0.01)
 
-### Example 2: Production Run with Claude Manual Tagging
+### 예시 2: Claude 수동 태깅을 통한 프로덕션 실행
 
-**Input:**
+**입력:**
 ```bash
 python3 scripts/pipeline.py \
   --input "data/raw data_meliens.xlsx" \
@@ -417,355 +412,227 @@ python3 scripts/pipeline.py \
   --prefix meliens_v1
 ```
 
-**Expected Execution:**
-1. Load full dataset (1,645 records)
-2. Enhance text
-3. Generate embeddings (or load from cache)
-4. Cluster with K=10 (fixed)
-5. Claude manually analyzes and tags 10 clusters (~2-3 min)
-6. Save results
+**예상 실행:**
+1. 전체 데이터셋 로드 (1,645개 레코드)
+2. 텍스트 향상
+3. 임베딩 생성 (또는 캐시에서 로드)
+4. K=10으로 클러스터링 (고정)
+5. Claude가 10개 클러스터를 수동으로 분석하고 태깅 (약 2-3분)
+6. 결과 저장
 
-**Output Files:**
-- `results/meliens_production/meliens_v1_clustered.xlsx` (1,645 rows)
-- `results/meliens_production/meliens_v1_tags.xlsx` (10 rows)
+**출력 파일:**
+- `results/meliens_production/meliens_v1_clustered.xlsx` (1,645행)
+- `results/meliens_production/meliens_v1_tags.xlsx` (10행)
 
-**Tag Quality:**
-- 0% "기타" category
-- Industry-specific categories: A/S (48.0%), 일반_상담 (19.3%), 배송 (11.9%)
-- Special cases detected: 데이터_오류 (7.1%), 내부_티켓 (3.3%)
+**태그 품질:**
+- 0% "기타" 카테고리
+- 업종별 카테고리: A/S (48.0%), 일반_상담 (19.3%), 배송 (11.9%)
+- 특수 케이스 감지: 데이터_오류 (7.1%), 내부_티켓 (3.3%)
 
-**Performance:**
-- Time: ~4 minutes (1 min embedding + 3 min manual tagging)
-- Cost: ~$0.10 ($0.08 embedding + $0.02 Claude tokens)
+### 예시 3: 다중 회사 배치 처리
 
-### Example 3: Multi-Company Batch Processing
-
-**Input:**
+**입력:**
 ```bash
-# Assacom (PC/Hardware)
+# Assacom (PC/하드웨어)
 python3 scripts/pipeline.py --input data/user_chat_assacom.xlsx --sample 1000 \
   --k 20 --prefix assacom --output results/assacom_agent
 
-# Usimsa (Telecom)
+# Usimsa (통신)
 python3 scripts/pipeline.py --input data/user_chat_usimsa.xlsx --sample 1000 \
   --k 10 --prefix usimsa --output results/usimsa_agent
 
-# Meliens (Electronics)
+# Meliens (전자제품)
 python3 scripts/pipeline.py --input "data/raw data_meliens.xlsx" \
   --k 10 --prefix meliens --output results/meliens_agent
 ```
 
-**Expected Results:**
+**예상 결과:**
 
-| Company | Industry | K | Silhouette | Top Categories |
-|---------|----------|---|------------|----------------|
-| Assacom | PC/Hardware | 20 | 0.064 | AS (33.8%), 일반문의 (28.5%) |
-| Usimsa | Telecom | 10 | 0.041 | 활성화, 기기설정, 사용량관리 |
-| Meliens | Electronics | 10 | 0.132 | A/S (48.0%), 일반_상담 (19.3%) |
+| 회사 | 업종 | K | Silhouette | 주요 카테고리 |
+|------|------|---|------------|--------------|
+| Assacom | PC/하드웨어 | 20 | 0.064 | AS (33.8%), 일반문의 (28.5%) |
+| Usimsa | 통신 | 10 | 0.041 | 활성화, 기기설정, 사용량관리 |
+| Meliens | 전자제품 | 10 | 0.132 | A/S (48.0%), 일반_상담 (19.3%) |
 
-### Example 4: Troubleshooting Empty Data
+## 문제 해결
 
-**Scenario:** Meliens dataset has 117 empty records (Cluster 3).
+### 문제 1: "KeyError: 'summarizedMessage'"
 
-**Detection (Claude Manual Mode):**
-```python
-# Cluster 3 analysis output:
-Cluster 3: 117건 (7.1%)
-⚠️  모든 레코드가 NaN (빈 데이터)
-```
+**원인:** 입력 Excel에 `summarizedMessage` 컬럼이 없음 (예: Meliens 데이터셋)
 
-**Tag Assignment:**
-```python
-{
-    'label': '데이터_오류',
-    'category': '시스템',
-    'keywords': ['빈_데이터', 'NaN', '누락'],
-    'description': '모든 레코드가 빈 데이터(NaN) - 시스템 오류 또는 데이터 수집 실패'
-}
-```
+**해결:**
+- 이것은 예상된 동작입니다 - 텍스트 향상이 폴백 전략을 사용합니다
+- 2단계 로그에서 "Strategy: first_message" 또는 "Strategy: combined_turns" 확인
+- `enhanced_text`가 채워져 있으면 조치 불필요
 
-**Action:**
-- Flag these records for data quality team
-- Exclude from analysis or mark as system issue
-- Investigate data collection pipeline
+### 문제 2: 낮은 Silhouette 점수 (<0.05)
 
-## Output Format
+**원인:** 고차원 임베딩(4096D)과 제한된 샘플이 차원의 저주를 일으킴
 
-### File 1: `{prefix}_clustered.xlsx`
+**맥락:**
+- Meliens: K=10, 점수=0.132 (좋음)
+- Assacom: K=20, 점수=0.064 (허용 가능)
+- Usimsa: K=10, 점수=0.041 (낮지만 예상됨)
 
-Sample rows (Meliens example):
+**해결:**
+- 고차원 데이터에서 K-Means의 낮은 점수는 예상됨
+- 클러스터 분포 균형과 태그 품질에 집중
+- 클러스터가 너무 분산되면 K 줄이기 고려
+- HDBSCAN으로 전환 금지 (70% 이상 노이즈 발생 - docs/FINAL_REPORT.md 참조)
 
-| id | userId | summarizedMessage | enhanced_text | text_strategy | cluster_id | cluster_size | label | category | keywords |
-|----|--------|-------------------|---------------|---------------|------------|--------------|-------|----------|----------|
-| 68dc87... | usr_123 | 질문: 멜리언스... | 질문: 멜리언스 세탁소용 보풀제거기의... | summary | 0 | 92 | 제품_문의 | 일반_상담 | 보풀제거기, 칼날, 쿠폰 |
-| 68ea4a... | usr_456 | 안녕하세요... | 안녕하세요 반품 신청한 건... | first_message | 1 | 170 | 주문_취소_변경 | 주문관리 | 반품철회, 주소변경 |
-| 68ff0c... | usr_789 | NaN | 질문: 충전이 잘 되지 않음... | combined_turns | 2 | 120 | 충전_AS | A/S | 충전기, 케이블, 부식 |
+### 문제 3: 높은 "기타" 카테고리 비율
 
-### File 2: `{prefix}_tags.xlsx`
+**시나리오:** Usimsa 통신 데이터에서 API 모드가 57%를 "기타"로 태깅
 
-Sample rows:
+**원인:** 하드코딩된 카테고리가 업종 도메인과 맞지 않음
 
-| cluster_id | label | category | keywords | description | count | percentage |
-|------------|-------|----------|----------|-------------|-------|------------|
-| 0 | 제품_문의 | 일반_상담 | 보풀제거기, 칼날, 쿠폰, 사용법, 제품_스펙 | 보풀제거기 제품 기능, 사용법, 구매 옵션, 칼날 재고 등에 대한 일반 문의 | 92 | 5.6% |
-| 1 | 주문_취소_변경 | 주문관리 | 반품철회, 주소변경, 취소, 재주문, 예약판매 | 주문 취소, 반품 철회, 배송지 변경 등 주문 내역 변경 요청 | 170 | 10.3% |
-| 2 | 충전_AS | A/S | 충전기, 케이블, 어댑터, 부식, 교체 | 진동클렌저 충전기 관련 문제(부식, 충전 불량) 및 케이블 교체 요청 | 120 | 7.3% |
+**해결:**
+- `--tagging-mode claude_manual`로 전환
+- Claude가 업종별 카테고리를 자동 생성
+- Usimsa 결과: 0% "기타", 적절한 통신 카테고리 (활성화, 기기설정)
 
-### Category Distribution Summary
+### 문제 4: 빈 캐시, 느린 재실행
 
-**Meliens (Claude Manual) - 1,645 records:**
-```
-A/S:         790건 (48.0%)
-일반_상담:    318건 (19.3%)
-배송:        196건 (11.9%)
-시스템:      171건 (10.4%)
-주문관리:    170건 (10.3%)
+**증상:** 캐싱에도 불구하고 매 실행마다 임베딩 재생성
 
-Total: 5 categories, 10 labels
-"기타" rate: 0%
-```
+**원인:** 다음으로 인한 캐시 키 불일치:
+- 다른 sample_size
+- 데이터 순서 변경 (텍스트 해시 다름)
+- 캐시 디렉토리 삭제
 
-## Troubleshooting
-
-### Issue 1: "KeyError: 'summarizedMessage'"
-
-**Cause:** Input Excel missing `summarizedMessage` column (e.g., Meliens dataset)
-
-**Solution:**
-- This is expected behavior - text enhancement will use fallback strategies
-- Verify Step 2 logs show "Strategy: first_message" or "Strategy: combined_turns"
-- No action needed if `enhanced_text` is populated
-
-### Issue 2: Low Silhouette Score (<0.05)
-
-**Cause:** High-dimensional embeddings (4096D) with limited samples create curse of dimensionality
-
-**Context:** 
-- Meliens: K=10, score=0.132 (good)
-- Assacom: K=20, score=0.064 (acceptable)
-- Usimsa: K=10, score=0.041 (low but expected)
-
-**Solution:**
-- Low score is expected for K-Means on high-dimensional data
-- Focus on cluster distribution balance and tag quality
-- Consider reducing K if clusters are too fragmented
-- Do NOT switch to HDBSCAN (creates 70%+ noise - see docs/FINAL_REPORT.md)
-
-### Issue 3: High "기타" (Other) Category Rate
-
-**Scenario:** API mode tagged 57% as "기타" for Usimsa telecom data
-
-**Cause:** Hardcoded categories don't match industry domain
-
-**Solution:**
-- Switch to `--tagging-mode claude_manual`
-- Claude will auto-generate industry-specific categories
-- Usimsa results: 0% "기타", with proper telecom categories (활성화, 기기설정)
-
-### Issue 4: Empty Cache, Slow Re-runs
-
-**Symptom:** Embeddings regenerated every run despite caching
-
-**Cause:** Cache key mismatch due to:
-- Different sample_size
-- Data order changed (text hash differs)
-- Cache directory deleted
-
-**Solution:**
+**해결:**
 ```bash
-# Check cache
+# 캐시 확인
 ls -lh cache/
 
-# Embeddings cache format:
+# 임베딩 캐시 형식:
 # embeddings_{model}_{texthash}_{count}.pkl
 
-# If cache exists but not loading:
-# - Verify text hash matches (same data order)
-# - Check sample size matches
-# - Ensure cache_dir parameter is correct
+# 캐시가 있지만 로드 안 되면:
+# - 텍스트 해시가 일치하는지 확인 (같은 데이터 순서)
+# - 샘플 크기가 일치하는지 확인
+# - cache_dir 파라미터가 올바른지 확인
 ```
 
-**Cache Management:**
-```bash
-# View cache size
-du -sh cache/
+### 문제 5: LLM 태깅 JSON 파싱 오류
 
-# Clean old caches (manual)
-rm cache/embeddings_*.pkl
+**증상:** 클러스터 태깅 시 `JSONDecodeError` (API 모드)
 
-# Keep specific cache
-mv cache/embeddings_abc123_1000.pkl cache/KEEP_embeddings_abc123_1000.pkl
-rm cache/embeddings_*.pkl
-mv cache/KEEP_embeddings_abc123_1000.pkl cache/embeddings_abc123_1000.pkl
-```
+**원인:** LLM이 비-JSON 응답 또는 잘못된 JSON 반환
 
-### Issue 5: LLM Tagging JSON Parse Error
+**현재 동작:**
+- 파이프라인이 기본 라벨 "클러스터 X" 할당
+- 처리 계속
 
-**Symptom:** `JSONDecodeError` when tagging clusters (API mode)
+**해결:**
+- 실제 LLM 응답 확인을 위해 API 로그 확인
+- 프롬프트 템플릿에 명확한 JSON 형식 요구사항 포함 확인
+- 빈번한 실패 시: `claude_manual` 모드로 전환
+- 또는 few-shot 예제로 프롬프트 개선
 
-**Cause:** LLM returned non-JSON response or malformed JSON
+### 문제 6: 메모리 부족 (OOM) 오류
 
-**Current Behavior:** 
-- Pipeline assigns default label "클러스터 X"
-- Continues processing
+**증상:** 대용량 데이터셋에서 임베딩 또는 클러스터링 중 Python 충돌
 
-**Solution:**
-- Check API logs for actual LLM response
-- Verify prompt template includes clear JSON format requirement
-- If frequent failures: switch to `claude_manual` mode
-- Or improve prompt with few-shot examples
+**원인:** 10,000개 이상의 레코드와 4096D 임베딩을 메모리에 로드
 
-### Issue 6: Out of Memory (OOM) Error
-
-**Symptom:** Python crashes during embedding or clustering on large datasets
-
-**Cause:** Loading 10,000+ records with 4096D embeddings into memory
-
-**Solution:**
+**해결:**
 ```python
-# Reduce sample size
+# 샘플 크기 줄이기
 python3 scripts/pipeline.py --input data.xlsx --sample 5000
 
-# Or process in batches (modify pipeline.py):
+# 또는 배치로 처리 (pipeline.py 수정):
 def process_in_batches(df, batch_size=5000):
     results = []
     for i in range(0, len(df), batch_size):
         batch = df[i:i+batch_size]
-        # Process batch...
+        # 배치 처리...
         results.append(batch_result)
     return pd.concat(results)
 ```
 
-### Issue 7: Cluster Size Imbalance
+## 참고 사항
 
-**Symptom:** One cluster has 800 records, others have 20-50
+### K-Means를 HDBSCAN 대신 사용하는 이유
 
-**Cause:** K-Means found dominant pattern in data
+HDBSCAN(밀도 기반 클러스터링)을 테스트했지만 다음 이유로 기각:
+- **기본 파라미터로 72% 노이즈** (1000개 레코드 중 720개 미할당)
+- **EOM(Excess of Mass)으로 단일 클러스터에 907/1000**
+- **차원의 저주**: 1000개 샘플에 4096D 임베딩 = 1:4.1 비율
 
-**Assessment:**
-- Check if large cluster is meaningful (e.g., "일반_상담")
-- Verify not a data quality issue (repeated text)
+K-Means가 성공하는 이유:
+- 거리 기반 (밀도 기반 아님) - 고차원에서 작동
+- 0% 노이즈 (모든 레코드 할당)
+- 적절한 K 선택으로 균형 잡힌 클러스터
 
-**Solutions:**
-1. Increase K to split large cluster
-2. Use hierarchical clustering on large cluster
-3. Accept if semantically correct (some categories are naturally larger)
+자세한 분석은 `docs/FINAL_REPORT.md` 참조.
 
-### Issue 8: API Rate Limiting
+### 태깅 모드 비교
 
-**Symptom:** `429 Too Many Requests` from Upstage API
+| 측면 | API 모드 | Claude 수동 |
+|------|----------|------------|
+| 속도 | 약 30초 | 10개 클러스터당 약 2-3분 |
+| 비용 | $0.01/1000 | 더 높음 (Claude 토큰) |
+| 카테고리 | 하드코딩 | 업종 적응형 |
+| "기타" 비율 | 20-57% | 0% |
+| 특수 케이스 | 놓침 | 감지 (빈 데이터, 내부 티켓) |
+| 확장성 | 높음 | 중간 |
+| 품질 | 표준 도메인에 좋음 | 모든 도메인에 우수 |
 
-**Cause:** Exceeded API rate limits during embedding generation
+**권장:**
+- **API 모드**: 빠른 프로토타이핑, 표준 도메인 (구매/배송/AS)에 사용
+- **Claude 수동**: 프로덕션, 업종별 분석, 품질이 중요한 작업에 사용
 
-**Solution:**
-```python
-# Add rate limiting to embedding generation
-import time
+### 비용 분석 (1000개 레코드당)
 
-def generate_embeddings_with_backoff(texts, batch_size=100):
-    embeddings = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i+batch_size]
-        
-        try:
-            response = requests.post(API_URL, json={"input": batch}, headers=headers)
-            response.raise_for_status()
-            embeddings.extend(response.json()['data'])
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                print("Rate limited, waiting 10 seconds...")
-                time.sleep(10)
-                # Retry
-                response = requests.post(API_URL, json={"input": batch}, headers=headers)
-                embeddings.extend(response.json()['data'])
-        
-        time.sleep(0.5)  # Throttle requests
-    
-    return embeddings
-```
+**임베딩:**
+- Upstage Solar embedding-passage: $0.05/1000 (100만 토큰 ≈ 1000개 한국어 문장)
 
-## Related Documentation
+**태깅:**
+- API 모드 (Solar-mini): $0.01/1000
+- Claude 수동: $0.02-0.05/1000 (복잡도에 따라 다름)
 
-- **Stage 1 SOP**: `/stage1-clustering` - AI workflow for executing clustering pipeline
-- **Stage 2 Extraction**: `/stage2-extraction` - Pattern extraction workflow
-- **Stage 3 SOP Generation**: `/stage3-sop-generation` - SOP generation workflow
-- **Full Pipeline**: `/excel-to-sop-pipeline` - End-to-end orchestration
-- **Project README**: `../README.md` - Project overview and quick start
+**1000개 레코드당 총액:**
+- API 모드: 약 $0.06
+- Claude 수동: 약 $0.08-$0.10
 
-## Notes
+**전체 데이터셋 (24,322개 레코드):**
+- API 모드: 약 $1.46
+- Claude 수동: 약 $2.00
 
-### Why K-Means over HDBSCAN?
+### 성능 벤치마크
 
-HDBSCAN (density-based clustering) was tested but rejected due to:
-- **72% noise** with default parameters (720/1000 records unassigned)
-- **907/1000 in single cluster** with EOM (Excess of Mass)
-- **Curse of dimensionality**: 4096D embeddings with 1000 samples = 1:4.1 ratio
+하드웨어: MacBook Pro M1, 16GB RAM
 
-K-Means succeeds because:
-- Distance-based (not density-based) - works in high dimensions
-- 0% noise (all records assigned)
-- Balanced clusters with proper K selection
+| 데이터셋 크기 | 임베딩 시간 | 클러스터링 시간 | 태깅 시간 (API) | 태깅 시간 (Claude) | 총합 |
+|--------------|------------|----------------|----------------|-------------------|------|
+| 100개 레코드 | 10초 | 5초 | 3초 | 1분 | 약 1.5분 |
+| 1,000개 레코드 | 60초 | 10초 | 30초 | 3분 | 약 5분 |
+| 10,000개 레코드 | 10분 | 60초 | 5분 | 30분 | 약 45분 |
 
-See `docs/FINAL_REPORT.md` for detailed analysis.
+*참고: 임베딩 시간은 캐시 없음 가정. 캐시 있으면: 크기와 관계없이 약 2-5초.*
 
-### Tagging Mode Comparison
-
-| Aspect | API Mode | Claude Manual |
-|--------|----------|---------------|
-| Speed | ~30 sec | ~2-3 min per 10 clusters |
-| Cost | $0.01/1000 | Higher (Claude tokens) |
-| Categories | Hardcoded | Industry-adaptive |
-| "기타" rate | 20-57% | 0% |
-| Special cases | Missed | Detected (empty data, internal tickets) |
-| Scalability | High | Medium |
-| Quality | Good for standard domains | Excellent for all domains |
-
-**Recommendation:**
-- Use **API mode** for quick prototyping, standard domains (구매/배송/AS)
-- Use **Claude manual** for production, industry-specific analysis, quality-critical work
-
-### Cost Breakdown (per 1000 records)
-
-**Embedding:**
-- Upstage Solar embedding-passage: $0.05/1000 (1M tokens ≈ 1000 Korean sentences)
-
-**Tagging:**
-- API mode (Solar-mini): $0.01/1000
-- Claude manual: $0.02-0.05/1000 (varies by complexity)
-
-**Total per 1000 records:**
-- API mode: ~$0.06
-- Claude manual: ~$0.08-$0.10
-
-**Full dataset (24,322 records):**
-- API mode: ~$1.46
-- Claude manual: ~$2.00
-
-### Performance Benchmarks
-
-Hardware: MacBook Pro M1, 16GB RAM
-
-| Dataset Size | Embedding Time | Clustering Time | Tagging Time (API) | Tagging Time (Claude) | Total |
-|--------------|----------------|-----------------|--------------------|-----------------------|-------|
-| 100 records | 10 sec | 5 sec | 3 sec | 1 min | ~1.5 min |
-| 1,000 records | 60 sec | 10 sec | 30 sec | 3 min | ~5 min |
-| 10,000 records | 10 min | 60 sec | 5 min | 30 min | ~45 min |
-
-*Note: Embedding time assumes no cache. With cache: ~2-5 seconds regardless of size.*
-
-### Data Privacy Considerations
+### 데이터 프라이버시 고려사항
 
 **Upstage API:**
-- Data sent to external API for embedding generation
-- Review Upstage privacy policy before processing sensitive data
-- Consider on-premise embedding models for confidential data
+- 임베딩 생성을 위해 데이터가 외부 API로 전송됨
+- 민감한 데이터 처리 전 Upstage 개인정보 정책 검토
+- 기밀 데이터의 경우 온프레미스 임베딩 모델 고려
 
 **Claude API:**
-- Chat data sent to Claude for manual tagging
-- Anthropic's data retention policy applies
-- For sensitive data: use API mode (Solar-mini) or local LLM
+- 수동 태깅을 위해 채팅 데이터가 Claude로 전송됨
+- Anthropic의 데이터 보존 정책 적용
+- 민감한 데이터의 경우: API 모드(Solar-mini) 또는 로컬 LLM 사용
 
-**Recommendation:**
-- Anonymize PII (personally identifiable information) before processing
-- Remove sensitive customer data (names, phone numbers, addresses)
-- Redact confidential business information if needed
+**권장:**
+- 처리 전 PII(개인 식별 정보) 익명화
+- 민감한 고객 데이터 제거 (이름, 전화번호, 주소)
+- 필요시 기밀 비즈니스 정보 수정
+
+## 관련 문서
+
+- **Stage 1 SOP**: `/stage1-clustering` - 클러스터링 파이프라인 실행 AI 워크플로우
+- **Stage 2 추출**: `/stage2-extraction` - 패턴 추출 워크플로우
+- **Stage 3 SOP 생성**: `/stage3-sop-generation` - SOP 생성 워크플로우
+- **전체 파이프라인**: `/excel-to-sop-pipeline` - 엔드투엔드 오케스트레이션
+- **프로젝트 README**: `../README.md` - 프로젝트 개요 및 빠른 시작
