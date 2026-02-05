@@ -1,0 +1,856 @@
+---
+name: stage2-extraction
+description: This SOP guides the real sample-based LLM extraction of patterns, FAQs, and response strategies from clustered customer support data. This is Stage 2 of the Excel-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis. **Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+type: anthropic-skill
+version: "1.0"
+---
+
+# Stage 2: Pattern & FAQ Extraction
+
+## Overview
+This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and response strategies from clustered customer support data. This is **Stage 2** of the Excel-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis.
+
+**Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+
+**Stage Flow:**
+- **Input**: Stage 1 clustering results (Excel files + analysis report)
+- **Process**:
+  1. Python extracts 20 random samples per cluster
+  2. LLM reads actual samples and identifies patterns
+  3. LLM extracts real customer expressions (NOT generic phrases!)
+  4. **LLM classifies HT vs TS based on samples** (NEW!)
+- **Output**: Structured JSON files with patterns, keywords, FAQ pairs, **HT/TS classification**
+
+**Key Capabilities:**
+- Extract common inquiry patterns from **actual customer messages**
+- Generate FAQ pairs using **real customer expressions**
+- Identify company-specific tone and brand messaging
+- Discover unexpected patterns and edge cases
+- Build knowledge base with verified accuracy
+
+**Critical Philosophy:**
+- ❌ DO NOT guess or infer patterns from cluster labels
+- ✅ DO read actual samples and extract verbatim customer expressions
+- ✅ DO measure frequency by counting occurrences in samples
+- ✅ DO preserve company tone from actual responses
+
+## Parameters
+
+### Required
+- **clustering_output_dir**: Directory containing Stage 1 results
+  - Example: `results/meliens`
+  - Must contain: `{prefix}_clustered.xlsx`, `{prefix}_tags.xlsx`, `analysis_report.md`
+
+- **company**: Company name for context
+  - Example: "Meliens", "Assacom", "Usimsa"
+  - Used to understand industry and customer domain
+
+### Optional
+- **focus_clusters** (default: "top_10"): Which clusters to prioritize
+  - `"top_10"`: Extract from top 10 largest clusters
+  - `"all"`: Extract from all clusters
+  - List of IDs: e.g., `"0,2,5,7"` for specific clusters
+
+- **extraction_depth** (default: "standard"): Level of detail
+  - `"quick"`: Basic patterns and keywords (5 min per 10 clusters)
+  - `"standard"`: Patterns + FAQ + response strategies (10 min per 10 clusters)
+  - `"deep"`: Full analysis with examples and edge cases (20 min per 10 clusters)
+
+- **output_format** (default: "json"): Output file format
+  - `"json"`: Structured JSON (recommended for Stage 3)
+  - `"markdown"`: Human-readable markdown
+  - `"both"`: Generate both formats
+
+## Steps
+
+### 1. Load and Review Stage 1 Results
+
+Read the clustering results to understand the data structure and context.
+
+**Constraints:**
+- You MUST read all three files from Stage 1:
+  1. `{prefix}_clustered.xlsx`: Full data with cluster assignments
+  2. `{prefix}_tags.xlsx`: Cluster summary
+  3. `analysis_report.md`: Analysis insights
+- You MUST verify that all clusters have meaningful labels (not "클러스터 X")
+- You SHOULD prioritize clusters identified in "Next Steps" section of analysis report
+- You MAY skip system/error clusters (e.g., "데이터_오류", "내부_티켓")
+- You MUST understand the company domain and industry before extraction
+
+**Reading Process:**
+```bash
+# In Claude Code
+Read results/meliens/meliens_clustered.xlsx
+Read results/meliens/meliens_tags.xlsx
+Read results/meliens/analysis_report.md
+```
+
+**What to Extract:**
+1. **From tags.xlsx:**
+   - Cluster ID, label, category, keywords, count
+   - Rank clusters by count (largest first)
+
+2. **From clustered.xlsx:**
+   - Sample messages per cluster (10-20 samples)
+   - Distribution of text lengths
+   - Common phrases and terminology
+
+3. **From analysis_report.md:**
+   - Top customer issues
+   - Recommended focus areas
+   - Industry-specific context
+   - Quality concerns or special cases
+
+**Expected Understanding:**
+```
+Company: Meliens (Electronics - home appliances)
+Total Clusters: 10
+Focus Clusters: [2, 0, 1, 9, 6] (Top 5 by size)
+Top Categories: A/S (48%), 일반_상담 (19%), 배송 (12%)
+Key Insight: A/S inquiries dominate, need detailed response templates
+```
+
+### 2. Extract Patterns per Cluster
+
+For each cluster, identify common patterns, inquiry types, and response needs by analyzing **actual customer messages**.
+
+**Constraints:**
+- You MUST analyze 20 sample messages per cluster using Python
+- You MUST identify 3-8 distinct patterns within each cluster
+- You MUST extract actual customer phrases from samples (DO NOT paraphrase or guess!)
+- You MUST NOT infer or assume patterns based on cluster labels alone
+- You MUST categorize patterns by: `정보_요청`, `문제_신고`, `프로세스_문의`, `불만_제기`
+- You SHOULD measure frequency by counting pattern occurrences in 20 samples
+- You MAY group similar patterns together
+- You MUST output patterns in Korean (original customer language)
+
+**Critical Requirement:**
+❌ **DO NOT** create patterns based on general business knowledge or assumptions
+✅ **DO** read actual sample messages and extract real customer expressions
+
+**Sample Extraction (Required First Step):**
+
+Use Python to extract 20 random samples per cluster:
+
+```python
+# Extract samples for each cluster
+import pandas as pd
+
+df = pd.read_excel('{clustering_output_dir}/{prefix}_clustered.xlsx')
+
+for cluster_id in target_clusters:
+    cluster_data = df[df['cluster_id'] == cluster_id]
+    samples = cluster_data.sample(n=20, random_state=42)
+
+    print(f"\n=== Cluster {cluster_id} Samples ===")
+    for i, (_, row) in enumerate(samples.iterrows(), 1):
+        print(f"{i}. {row['enhanced_text'][:250]}")
+```
+
+**Pattern Analysis Framework:**
+
+After reading samples, extract for each cluster:
+1. **Pattern Name**: Short descriptive label (Korean)
+2. **Pattern Type**: `정보_요청`, `문제_신고`, `프로세스_문의`, `불만_제기`
+3. **Common Phrases**: 3-5 actual phrases from samples (verbatim!)
+4. **Intent**: What the customer wants to achieve
+5. **Frequency**: Measured from 20 samples (high: ≥30%, medium: 20-29%, low: <20%)
+
+**Example Analysis (Cluster 6: 견적/구매 상담 - Assacom):**
+
+**Step 1: Read actual samples**
+```
+Sample 1: "하드디스크와 SATA SSD 추가 장착 가능..."
+Sample 2: "고사양 게임에 적합한 PC 여부 확인..."
+Sample 3: "전화 상담 요청..."
+Sample 4: "SSD, RAM 미포함 주문 확인..."
+...
+Sample 20: ...
+```
+
+**Step 2: Extract patterns from actual samples**
+```json
+{
+  "cluster_id": 6,
+  "label": "견적/구매 상담",
+  "category": "견적_구매",
+  "patterns": [
+    {
+      "pattern_name": "부품_추가_변경_요청",
+      "pattern_type": "프로세스_문의",
+      "common_phrases": [
+        "하드디스크 추가 장착 가능",           ← Sample 1
+        "SSD, RAM 추가하고 싶어요",          ← Sample 4
+        "케이스 교체 요청",                  ← Sample 9
+        "메인보드 변경 요청"                 ← Sample 9
+      ],
+      "intent": "기본 견적에 부품 추가 또는 변경 요청",
+      "frequency": "high"  ← 20개 중 8개 = 40%
+    },
+    {
+      "pattern_name": "용도별_PC_추천",
+      "pattern_type": "정보_요청",
+      "common_phrases": [
+        "고사양 게임에 적합한 PC",            ← Sample 2
+        "윈도우+게이밍/그래픽작업용",        ← Sample 11
+        "포토샵 작업용 PC"                  ← Sample 15
+      ],
+      "intent": "용도에 맞는 PC 사양 추천 요청",
+      "frequency": "high"  ← 20개 중 6개 = 30%
+    },
+    {
+      "pattern_name": "전화_상담_요청",
+      "pattern_type": "프로세스_문의",
+      "common_phrases": [
+        "전화 상담 요청",                    ← Sample 3
+        "전화 상담 가능 날짜"                ← Sample 3
+      ],
+      "intent": "채팅보다 전화 상담 선호",
+      "frequency": "low"  ← 20개 중 3개 = 15%
+    }
+  ]
+}
+```
+
+**Extraction Process (Updated):**
+
+For each target cluster:
+1. **Use Python to extract 20 random samples** (DO NOT read sequentially!)
+   ```python
+   samples = cluster_data.sample(n=20, random_state=42)
+   ```
+2. **Read ALL 20 samples** and print them for LLM analysis
+3. **Identify patterns** by manually grouping similar messages
+4. **Extract common phrases** from actual samples (copy-paste, do not rephrase!)
+5. **Measure frequency** by counting: (pattern occurrences / 20) × 100%
+6. **Classify pattern type** based on customer intent
+7. **Document in JSON structure** with actual customer expressions
+
+### 2.5. Classify HT vs TS per Cluster
+
+After analyzing samples and extracting patterns, determine whether this cluster is better suited for **How-To (HT)** or **Troubleshooting (TS)** template.
+
+**Constraints:**
+- You MUST classify each cluster as HT or TS based on actual samples (NOT pattern_type counts!)
+- You MUST read templates/HT_template.md and templates/TS_template.md to understand differences
+- You MUST provide detailed reasoning based on samples
+- You SHOULD consider the main purpose and customer intent
+- You MAY assign medium/low confidence if cluster has mixed characteristics
+
+**Template Comparison:**
+
+**HT (How-To)**: 정보 제공 및 안내
+- 목적: 이용 방법, 정책 안내, 프로세스 가이드
+- 구조: 목적 → 주의사항 → **내용** (주제별) → 톤앤매너
+- 예시: "배송 일정 조회 방법", "견적 요청 방법", "제품 사양 안내"
+
+**TS (Troubleshooting)**: 문제 해결
+- 목적: 클레임 처리, 반품/교환, 오류 해결, 불만 응대
+- 구조: 목적 → 주의사항 → **문제 상황 확인** → **해결책 안내 (케이스별)**
+- 예시: "AS 신청 프로세스", "윈도우 설치 문제", "배송 오류 처리"
+
+**Classification Process:**
+
+1. **Review actual samples** (already read in Step 2)
+2. **Ask yourself**:
+   - 주요 목적이 문제 해결인가? → TS
+   - 주요 목적이 정보 제공/안내인가? → HT
+3. **Consider nuances**:
+   - "프로세스_문의"가 많아도 **문제 해결 프로세스**면 TS
+   - "정보_요청"이 많아도 단순 안내면 HT
+4. **Provide reasoning** with evidence from samples
+
+**Classification Examples:**
+
+**Example 1: Cluster 10 (AS 신청/진단)**
+```json
+{
+  "sop_type_recommendation": {
+    "type": "TS",
+    "confidence": "high",
+    "reasoning": "PC 고장, 블루스크린, 전원 문제 등 하드웨어 불량을 해결하는 클러스터입니다. 고객이 AS 신청 방법을 문의하지만, 근본 목적은 '문제 해결'이므로 Troubleshooting 템플릿이 적합합니다.",
+    "key_evidence": [
+      "PC가 갑자기 꺼져요 (문제 신고)",
+      "블루스크린 발생 (문제 해결 필요)",
+      "AS 접수 방법 (문제 해결 프로세스)"
+    ],
+    "template_sections": {
+      "문제 상황 확인": ["전원 연결", "블루스크린 코드", "증상"],
+      "해결책_케이스별": [
+        "케이스 1: 전원 문제 → 트러블슈팅",
+        "케이스 2: 블루스크린 → AS 접수"
+      ]
+    }
+  }
+}
+```
+
+**Example 2: Cluster 15 (배송 일정 조정)**
+```json
+{
+  "sop_type_recommendation": {
+    "type": "HT",
+    "confidence": "high",
+    "reasoning": "배송 일정 확인, 당일 출고 가능 여부, 배송 날짜 변경 등 '정보 제공 및 안내' 중심입니다. 문제가 발생한 것이 아니라 일정을 알고 싶어 하므로 How-To 템플릿이 적합합니다.",
+    "key_evidence": [
+      "출고 일정 문의 (정보 요청)",
+      "당일 출고 가능한가요 (안내 필요)",
+      "배송 날짜 변경 (프로세스 안내)"
+    ],
+    "template_sections": {
+      "내용": [
+        "출고 일정 확인 방법",
+        "당일 출고 기준 (오후 4시)",
+        "배송 날짜 변경 절차"
+      ]
+    }
+  }
+}
+```
+
+**Example 3: Cluster 9 (윈도우/AS 문의) - Nuanced Case**
+```json
+{
+  "sop_type_recommendation": {
+    "type": "TS",
+    "confidence": "medium",
+    "reasoning": "윈도우 설치 여부 확인(정보_요청)도 있지만, 실제 샘플을 보면 '윈도우 설치 실패', 'TPM 설정 오류', '라이선스 인증 문제' 등 기술 문제 해결이 주요 내용입니다. 정보 제공보다는 문제 해결 프로세스 안내가 핵심이므로 TS가 더 적합합니다.",
+    "key_evidence": [
+      "윈도우 설치 실패 → 재설치 방법 (문제 해결)",
+      "라이선스 인증 안 됨 → 해결 방법 (문제 해결)",
+      "TPM 설정 오류 → BIOS 설정 (문제 해결)"
+    ],
+    "alternative_consideration": "HT로도 가능하지만, '문제 상황 확인' 섹션이 필요하므로 TS가 더 구조적으로 적합",
+    "template_sections": {
+      "문제 상황 확인": ["윈도우 설치 여부", "오류 메시지", "BIOS 설정"],
+      "해결책_케이스별": [
+        "케이스 1: 미설치 → 설치 가이드",
+        "케이스 2: 인증 오류 → 라이선스 재입력",
+        "케이스 3: TPM 오류 → BIOS 설정"
+      ]
+    }
+  }
+}
+```
+
+### 3. Generate FAQ Pairs
+
+Create question-answer pairs for each common pattern **based on actual sample analysis**.
+
+**Constraints:**
+- You MUST generate at least 3-5 FAQ pairs per cluster (more for complex clusters)
+- You MUST write questions using actual customer language from samples (NOT generic questions!)
+- You MUST write answers following company's actual tone from samples
+- You MUST ensure answers are actionable with specific steps, timeframes, and contact info
+- You SHOULD prioritize high-frequency patterns first
+- You SHOULD include edge cases and exceptions
+- You MAY use placeholders (e.g., `[고객명]`, `[제품명]`) for templates
+- You MUST NOT create generic FAQ pairs without reading actual samples
+
+**Critical Requirement:**
+❌ **DO NOT** write generic FAQs like "이 문제는 어떻게 해결하나요?"
+✅ **DO** extract real questions from samples: "퀵으로 변경 가능한가요?", "TPM 설정은 어떻게 하나요?"
+
+**Company Tone Analysis:**
+Before generating FAQs, identify the company's tone from actual samples:
+- Greeting style (formal/casual, emoji usage)
+- Response structure (numbered steps, bullet points)
+- Brand messaging ("최고의 품질과 합리적인 가격" for Assacom)
+- Closing style ("추가 문의 있으시면", "감사합니다!")
+
+**FAQ Structure:**
+```json
+{
+  "cluster_id": 2,
+  "label": "충전_AS",
+  "faq_pairs": [
+    {
+      "faq_id": "faq_2_1",
+      "question": "충전이 안 되는데 어떻게 해야 하나요?",
+      "answer": "충전 문제는 다음 단계로 확인해주세요:\n1. 케이블과 어댑터가 제품과 전원에 제대로 연결되었는지 확인\n2. 충전 포트에 이물질이나 먼지가 없는지 확인\n3. 다른 케이블로 교체 테스트\n4. 문제가 지속되면 AS 접수를 진행해드립니다. (1544-XXXX)",
+      "related_patterns": ["충전기_고장_증상"],
+      "escalation": "3회 이상 문의 시 즉시 AS 접수",
+      "keywords": ["충전", "불량", "AS", "케이블"],
+      "frequency": "high"
+    },
+    {
+      "faq_id": "faq_2_2",
+      "question": "충전기를 새로 받을 수 있나요?",
+      "answer": "충전기 교체는 AS 접수 후 가능합니다. \n- AS 접수: 1544-XXXX 또는 홈페이지\n- 검수 후 교체 여부 결정 (1-2일)\n- 교체품 발송 (3-5일 소요)\n무상 교체 기준: 구매 후 1년 이내, 제품 결함으로 인한 고장",
+      "related_patterns": ["충전기_교체_요청"],
+      "escalation": "warranty 기간 확인 필요",
+      "keywords": ["충전기", "교체", "AS", "무상"],
+      "frequency": "high"
+    },
+    {
+      "faq_id": "faq_2_3",
+      "question": "충전 시간이 얼마나 걸리나요?",
+      "answer": "[제품명] 제품의 표준 충전 시간은 약 3-4시간입니다.\n- 완전 방전 상태: 4시간\n- 일반 충전: 2-3시간\n만약 5시간 이상 소요되거나 평소보다 현저히 느려진 경우 배터리 문제일 수 있으니 AS 센터로 문의 바랍니다.",
+      "related_patterns": ["충전_속도_문의"],
+      "keywords": ["충전시간", "완충", "배터리"],
+      "frequency": "medium"
+    }
+  ]
+}
+```
+
+**Generation Guidelines:**
+- **Questions**: Use casual, conversational Korean (customers' actual language)
+- **Answers**: Professional but friendly tone, step-by-step format preferred
+- **Escalation**: When to transfer to human agent or specialized team
+- **Keywords**: For search and categorization
+- **Related Patterns**: Link to patterns from Step 2
+
+### 4. Identify Response Strategies
+
+Define response strategies, escalation rules, and process flows.
+
+**Constraints:**
+- You MUST identify response strategy for each cluster
+- You MUST define escalation triggers (when to transfer to human)
+- You SHOULD document standard response time expectations
+- You SHOULD identify automation opportunities (self-service, chatbot)
+- You MAY create decision trees for complex issues
+- You MUST specify required agent knowledge or tools
+
+**Response Strategy Structure:**
+```json
+{
+  "cluster_id": 2,
+  "label": "충전_AS",
+  "response_strategy": {
+    "primary_approach": "troubleshooting_guide",
+    "description": "단계별 문제 해결 가이드 제공 후 AS 접수 진행",
+    "standard_response_time": "즉시 (자동 응답 가능)",
+    "escalation_triggers": [
+      "고객이 트러블슈팅 3회 이상 시도",
+      "보증 기간 확인 필요",
+      "배터리 교체 요청"
+    ],
+    "escalation_target": "AS 센터",
+    "required_knowledge": [
+      "제품 충전 사양 (시간, 전압)",
+      "무상 AS 기준 (1년, 결함)",
+      "교체 프로세스 (검수 1-2일, 발송 3-5일)"
+    ],
+    "required_tools": [
+      "AS 접수 시스템",
+      "고객 구매 이력 조회",
+      "재고 확인 시스템"
+    ],
+    "automation_opportunity": "high",
+    "automation_suggestion": "트러블슈팅 가이드를 챗봇으로 자동 응답, AS 접수만 상담원 처리",
+    "template_needed": true,
+    "template_type": "troubleshooting_steps"
+  }
+}
+```
+
+**Decision Tree Example (Complex Issues):**
+```markdown
+## 충전_AS 대응 흐름
+
+1. **초기 증상 파악**
+   - 충전이 전혀 안 됨 → [케이블 체크]
+   - 충전이 느림 → [배터리 수명 확인]
+   - 간헐적 충전 → [접촉 불량 확인]
+
+2. **케이블 체크**
+   - 다른 케이블로 테스트 요청
+   - 성공 → 케이블 교체 안내
+   - 실패 → [AS 접수]
+
+3. **AS 접수**
+   - 구매 날짜 확인
+   - 1년 이내 → 무상 AS 안내
+   - 1년 이후 → 유상 AS 안내 (비용 10,000원)
+   - 접수 완료 → 예상 처리 기간 안내 (5-7일)
+```
+
+### 5. Build Keyword Taxonomy
+
+Create a structured keyword taxonomy for search and categorization.
+
+**Constraints:**
+- You MUST extract keywords from all analyzed clusters
+- You MUST group keywords hierarchically (category → subcategory → keywords)
+- You SHOULD identify synonyms and variations
+- You MAY include common typos or abbreviations
+- You MUST use Korean keywords (customer language)
+
+**Keyword Taxonomy Structure:**
+```json
+{
+  "company": "Meliens",
+  "taxonomy": {
+    "A/S": {
+      "충전": {
+        "primary_keywords": ["충전", "충전기", "케이블", "어댑터"],
+        "synonyms": ["충천", "충진", "전원", "배터리"],
+        "related_terms": ["완충", "충전시간", "충전속도", "충전불량"],
+        "product_specific": ["타입C", "USB", "무선충전"]
+      },
+      "수리": {
+        "primary_keywords": ["수리", "AS", "고장", "불량"],
+        "synonyms": ["에이에스", "a/s", "AS접수"],
+        "related_terms": ["무상수리", "유상수리", "수리비용", "수리기간"]
+      },
+      "교체": {
+        "primary_keywords": ["교체", "교환", "새제품"],
+        "related_terms": ["재발송", "반품교환"]
+      }
+    },
+    "배송": {
+      "조회": {
+        "primary_keywords": ["배송", "배송조회", "송장", "운송장"],
+        "related_terms": ["언제도착", "배송기간", "배송현황"],
+        "carrier_names": ["CJ", "로젠", "우체국"]
+      }
+    }
+  }
+}
+```
+
+### 6. Save Extraction Results
+
+Save all extracted data in structured JSON and/or Markdown format.
+
+**Constraints:**
+- You MUST create output directory if it doesn't exist
+- You MUST save at least one output format (JSON recommended)
+- You SHOULD include metadata (timestamp, source files, cluster count)
+- You MAY split output into multiple files for readability
+- You MUST NOT overwrite existing files without confirmation
+
+**Output Files:**
+
+1. **`patterns.json`**: All extracted patterns with HT/TS classification
+```json
+{
+  "metadata": {
+    "company": "Meliens",
+    "generated_at": "2024-01-28T18:30:00",
+    "source_files": [
+      "results/meliens/meliens_clustered.xlsx",
+      "results/meliens/meliens_tags.xlsx"
+    ],
+    "total_clusters": 10,
+    "analyzed_clusters": 10,
+    "extraction_depth": "standard"
+  },
+  "clusters": [
+    {
+      "cluster_id": 2,
+      "label": "충전_AS",
+      "category": "A/S",
+      "cluster_size": 120,
+      "patterns": [...],
+      "faq_pairs": [...],
+      "response_strategy": {...},
+      "sop_type_recommendation": {
+        "type": "TS",
+        "confidence": "high",
+        "reasoning": "충전 문제 해결 중심, 트러블슈팅 가이드 필요",
+        "key_evidence": ["충전이 안 돼요", "케이블 불량", "AS 접수"],
+        "template_sections": {
+          "문제_상황_확인": ["케이블 연결", "충전 포트", "어댑터"],
+          "해결책_케이스별": ["케이블 교체", "AS 접수"]
+        }
+      }
+    },
+    ...
+  ]
+}
+```
+
+2. **`faq.json`**: All FAQ pairs
+```json
+{
+  "metadata": {...},
+  "faq_pairs": [
+    {
+      "faq_id": "faq_2_1",
+      "cluster_id": 2,
+      "cluster_label": "충전_AS",
+      "question": "...",
+      "answer": "...",
+      ...
+    },
+    ...
+  ]
+}
+```
+
+3. **`response_strategies.json`**: Response strategies and escalation rules
+```json
+{
+  "metadata": {...},
+  "strategies": [
+    {
+      "cluster_id": 2,
+      "label": "충전_AS",
+      "response_strategy": {...}
+    },
+    ...
+  ]
+}
+```
+
+4. **`keywords.json`**: Keyword taxonomy
+```json
+{
+  "metadata": {...},
+  "taxonomy": {...}
+}
+```
+
+5. **`extraction_summary.md`**: Human-readable summary
+```markdown
+# Stage 2 Extraction Summary: Meliens
+
+## Overview
+- Company: Meliens (Electronics)
+- Clusters Analyzed: 10
+- Total Patterns: 37
+- Total FAQ Pairs: 52
+- Extraction Depth: Standard
+
+## Top Patterns by Cluster
+### Cluster 2: 충전_AS (120건, 7.3%)
+1. 충전기_고장_증상 (high frequency)
+2. 충전기_교체_요청 (high frequency)
+3. 충전_속도_문의 (medium frequency)
+
+[Continue for top 5 clusters...]
+
+## Automation Opportunities
+1. **충전 트러블슈팅** (Cluster 2): High automation potential
+   - Chatbot can handle initial troubleshooting
+   - Only escalate after 3 failed attempts
+
+2. **배송 조회** (Cluster 7): Very high automation potential
+   - Fully automate with tracking link
+   - No human intervention needed
+
+## Next Steps for Stage 3
+1. Focus on top 5 clusters for SOP generation
+2. Create response templates for high-frequency patterns
+3. Design decision trees for complex issues (충전_AS, 배송_문의)
+```
+
+**File Creation:**
+```bash
+# In Claude Code
+Write results/meliens/02_extraction/patterns.json
+Write results/meliens/02_extraction/faq.json
+Write results/meliens/02_extraction/response_strategies.json
+Write results/meliens/02_extraction/keywords.json
+Write results/meliens/02_extraction/extraction_summary.md
+```
+
+### 7. Enrich Patterns with Conversation Samples
+
+Embed representative conversation samples into patterns.json for Stage 3 optimization.
+
+**Constraints:**
+- You MUST run this step after Step 6 (patterns.json saved)
+- You MUST use `enrich_patterns.py` Python script
+- You SHOULD select 10 representative conversations per cluster
+- You MUST include both sample conversations and tone-and-manner examples
+- You MAY skip this step if Stage 3 will read clustered.xlsx directly
+
+**Execution:**
+```bash
+# Run enrichment script
+python3 scripts/enrich_patterns.py \
+  --patterns results/{company}/02_extraction/patterns.json \
+  --messages results/{company}/{company}_messages.csv \
+  --output results/{company}/02_extraction/patterns_enriched.json
+```
+
+**Sample Selection Strategy (from enrich_patterns.py)**:
+1. **Representative cases** (2-3개): 중간 길이 대화 (대표적 케이스)
+2. **Complex case** (1개): 가장 긴 대화 (15+ 메시지, 복잡한 상황)
+3. **Simple case** (1개): 가장 짧은 대화 (3+ 메시지, 간단한 문의)
+4. **Additional samples**: 나머지 샘플로 10개 채움
+
+**Tone-and-Manner Extraction**:
+- 상담원 메시지 20개 추출
+- 자동 분류: greeting, empathy, closing, proactive
+- 길이 10-200자, 중복 제거
+
+**Expected Output:**
+```
+✅ Enrichment 완료!
+총 클러스터: 10개
+  - 성공: 10개
+  - 실패: 0개
+
+파일 크기:
+  - 원본: 125.3 KB
+  - Enriched: 487.6 KB (3.9x)
+
+출력 파일: results/assacom/02_extraction/patterns_enriched.json
+```
+
+**Quality Checks:**
+- [ ] patterns_enriched.json 생성 성공
+- [ ] 파일 크기 3-5배 증가 (샘플 포함으로 정상)
+- [ ] 각 클러스터에 sample_conversations 포함
+- [ ] 각 클러스터에 tone_and_manner_samples 포함
+
+**Benefits for Stage 3:**
+- ✅ clustered.xlsx 재로드 불필요 (파일 의존성 단순화)
+- ✅ 샘플 선정 전략 일관성 (재현성 보장)
+- ✅ 약간의 속도 향상 (~8초/SOP)
+- ✅ 이식성 향상 (patterns_enriched.json 하나로 충분)
+
+**Note:**
+- Stage 3에서 patterns_enriched.json을 사용하도록 설정 필요
+- 또는 Stage 3가 clustered.xlsx를 계속 사용할 수도 있음 (enrich 선택적)
+
+## Examples
+
+### Example 1: Standard Extraction (Assacom - Top 10 Clusters)
+
+**Parameters:**
+- clustering_output_dir: `results/assacom`
+- company: "Assacom"
+- focus_clusters: "top_10"
+- extraction_depth: "standard"
+
+**Execution Method:**
+1. Use Bash + Python to extract 20 samples per cluster
+2. Use Task agent (general-purpose) to analyze all clusters in parallel
+3. Save results to JSON files
+
+**Actual Execution Time**: **~5 minutes** ⚡
+
+**Output:**
+- 10 clusters analyzed (645건, 64.5% coverage)
+- 56 patterns extracted (실제 고객 표현 기반!)
+- 39 FAQ pairs generated (3-5 per cluster)
+- 10 response strategies
+- Company tone reflected (Assacom: "최고의 품질과 합리적인 가격", 이모지 사용)
+
+**Key Learnings:**
+- Real customer expressions discovered: "안심번호로 배송조회 불가", "11번가 할인구매가 적용"
+- Unexpected patterns found: "전화 상담 선호" (15%), "부품 추가/변경" (40%)
+- Brand-specific tone: Assacom uses friendly emojis (🙌😊) and emphasizes quality
+
+### Example 2: Deep Extraction (All Clusters with Edge Cases)
+
+**Parameters:**
+- clustering_output_dir: `results/meliens`
+- company: "Meliens"
+- focus_clusters: "all"
+- extraction_depth: "deep"
+
+**Execution Time**: ~15-20 minutes
+
+**Output:**
+- All 20 clusters analyzed
+- 80+ patterns extracted (4-6 per cluster)
+- 70+ FAQ pairs generated (5-7 per cluster)
+- Detailed response strategies with decision trees
+- Comprehensive keyword taxonomy
+- Edge cases and exceptions documented
+
+## Troubleshooting
+
+### Issue 1: Patterns are too generic
+
+**Symptom**: Extracted patterns lack specificity
+- Example: "조립 PC 견적 부탁드립니다" ← Generic (guessed)
+- Problem: No actual customer used this exact phrase!
+
+**Root Cause**: LLM created patterns based on cluster label without reading actual samples
+
+**Solution:**
+1. **ALWAYS read 20 actual sample messages first** using Python
+2. **Extract phrases verbatim** from samples (copy-paste, don't paraphrase!)
+3. **Compare before/after**:
+   - ❌ Generic (guessed): "견적 요청해주세요"
+   - ✅ Actual (from samples): "하드디스크 추가 장착 가능", "케이스 교체 요청"
+4. **Identify company-specific patterns**:
+   - Example: Assacom customers say "11번가 할인구매가 적용" (not generic "할인 되나요")
+5. **Measure frequency accurately**: Count occurrences in 20 samples, not estimate
+
+**Real Example (Assacom Cluster 6):**
+```
+❌ 잘못된 방식 (추측):
+"common_phrases": ["조립 PC 견적 부탁드립니다"]
+
+✅ 올바른 방식 (실제 샘플):
+"common_phrases": [
+  "하드디스크와 SATA SSD 추가 장착 가능",  ← Sample 1
+  "SSD, RAM 미포함 주문 확인",           ← Sample 4
+  "케이스 교체 요청"                     ← Sample 9
+]
+```
+
+### Issue 2: FAQ answers are incomplete
+
+**Symptom**: Answers don't provide actionable steps
+
+**Solution:**
+- Reference company's existing support documentation
+- Include specific phone numbers, URLs, timeframes
+- Add decision logic ("IF warranty expired, THEN...")
+- Review with domain expert if available
+
+### Issue 3: Too many patterns per cluster
+
+**Symptom**: 10+ patterns per cluster, hard to manage
+
+**Solution:**
+- Group similar patterns under umbrella pattern
+- Focus on top 3-5 highest frequency patterns
+- Save minor patterns as "edge cases" separately
+
+## Related Documentation
+
+- **Stage 1**: `agent-sops/stage1-clustering.sop.md` (Prerequisite)
+- **Stage 3**: `agent-sops/stage3-sop-generation.sop.md` (Next step)
+- **Analysis Report Template**: `rules/analysis-report-template.md`
+
+## Notes
+
+### Why No Python Scripts?
+
+Stage 2 is intentionally LLM-based because:
+- Pattern extraction requires language understanding (not statistical)
+- FAQ generation needs natural language generation
+- Response strategies require domain reasoning
+- Claude Code can analyze Excel and generate JSON directly
+
+### Extraction Quality Tips
+
+1. **Read diverse samples**: Don't just read first 10 messages, sample throughout cluster
+2. **Preserve customer voice**: Use actual phrases, don't paraphrase
+3. **Think operationally**: Consider what agents need to respond effectively
+4. **Validate with domain knowledge**: If available, review with customer support team
+
+### Time Estimates (Updated based on actual execution)
+
+| Extraction Depth | Clusters | Time | Method |
+|------------------|----------|------|--------|
+| Quick | 5 | ~3-5 min | Basic patterns + keywords |
+| Standard | 10 | ~5-10 min | Patterns + FAQ + strategies (with agent) |
+| Deep | 10 | ~15-20 min | Full analysis + examples + edge cases |
+
+**Actual Performance (Assacom Case):**
+- 10 clusters analyzed with real samples: **~5 minutes**
+- Using Task agent (general-purpose) for parallel analysis: **highly efficient**
+- Sample collection (Python): < 1 second
+- Pattern extraction (LLM): 2-3 minutes
+- FAQ generation (LLM): 1-2 minutes
+- File saving: < 1 second
+
+**Efficiency Tips:**
+1. Use Task agent with `subagent_type=general-purpose` for batch analysis
+2. Provide all cluster samples at once for parallel processing
+3. Use `random_state=42` for consistent sampling
+4. Focus on top 10 clusters first (covers 60-70% of data)
+
+*Note: Time varies based on cluster complexity and domain familiarity.*

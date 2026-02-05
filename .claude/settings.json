@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(python3 scripts/pipeline.py:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(mmdc:*)",
+      "Bash(npm install:*)",
+      "Bash(brew install:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/check_dependencies.sh:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "Read",
+      "Write",
+      "Edit"
+    ]
+  }
+}
