@@ -28,15 +28,15 @@ This SOP guides the generation of a production-ready Agent SOP document from ext
 
 ### Required
 - **extraction_output_dir**: Directory containing Stage 2 results
-  - Example: `results/meliens/02_extraction`
+  - Example: `results/{company}/02_extraction`
   - Must contain: `patterns.json`, `faq.json`, `response_strategies.json`
 
 - **company**: Company name
-  - Example: "Meliens", "Assacom", "Usimsa"
+  - Example: "Channel Corp."
   - Used in SOP title and context
 
 - **sop_title**: Title of the generated SOP
-  - Example: "Meliens Customer Support Assistant"
+  - Example: "Channel Corp. Customer Support Assistant"
   - Should be descriptive and specific
 
 ### Optional
@@ -84,17 +84,17 @@ Read all Stage 2 outputs to understand extracted patterns and strategies.
 **Reading Process:**
 ```bash
 # In Claude Code - Stage 2 outputs
-Read results/meliens/02_extraction/patterns.json
-Read results/meliens/02_extraction/faq.json
-Read results/meliens/02_extraction/response_strategies.json
-Read results/meliens/02_extraction/keywords.json
-Read results/meliens/02_extraction/extraction_summary.md
+Read results/{company}/02_extraction/patterns.json
+Read results/{company}/02_extraction/faq.json
+Read results/{company}/02_extraction/response_strategies.json
+Read results/{company}/02_extraction/keywords.json
+Read results/{company}/02_extraction/extraction_summary.md
 
 # RECOMMENDED: Stage 2 enriched patterns (if available)
-Read results/meliens/02_extraction/patterns_enriched.json  # 샘플 이미 포함됨 (권장)
+Read results/{company}/02_extraction/patterns_enriched.json  # 샘플 이미 포함됨 (권장)
 
 # FALLBACK: Stage 1 output (if patterns_enriched.json doesn't exist)
-# Read results/meliens/meliens_clustered.xlsx  # 클러스터별 샘플 직접 추출
+# Read results/{company}/{company}_clustered.xlsx  # 클러스터별 샘플 직접 추출
 ```
 
 **Analysis Checklist:**
@@ -204,11 +204,11 @@ common inquiry types, automated response generation, and escalation rules.
 - Higher first-contact resolution rate (target: >80%)
 ```
 
-**Example (Meliens):**
+**Example (Channel Corp.):**
 ```markdown
 ## Overview
-This SOP guides Meliens customer support agents in handling customer inquiries
-for home appliance products (fabric shavers, vibration cleansers). It covers
+This SOP guides Channel Corp. customer support agents in handling customer inquiries
+for consumer electronic products. It covers
 5 major categories: A/S (48%), General Inquiries (19%), Delivery (12%),
 Order Management (10%), and System Issues (10%).
 
@@ -324,7 +324,7 @@ Create detailed steps using extracted patterns and response strategies.
 {What this step produces}
 ```
 
-**Example Steps (Meliens Customer Support):**
+**Example Steps (Channel Corp. Customer Support):**
 
 ```markdown
 ## Steps
@@ -404,7 +404,7 @@ Process A/S (after-sales service) inquiries using troubleshooting patterns.
 **Tools Required:**
 - FAQ database (faq.json)
 - Warranty lookup system (customer purchase history)
-- AS center contact info (1544-XXXX)
+- AS center contact info (1234-5678)
 
 **Expected Output:**
 - Troubleshooting guidance provided (charging checklist, symptom questions)
@@ -461,11 +461,11 @@ Generate appropriate response using pattern-matched templates.
 2. Fill in placeholders:
    - `[고객명]` → customer name or "고객님"
    - `[제품명]` → product name from order history
-   - `[AS센터 번호]` → 1544-XXXX
+   - `[AS센터 번호]` → 1234-5678
    - `[예상기간]` → estimated timeframe (3-5일, etc.)
 3. Add empathy statement if complaint or frustration detected
 4. Include call-to-action or next steps
-5. Append signature: "감사합니다. Meliens 고객센터"
+5. Append signature: "감사합니다. Channel Corp. 고객센터"
 
 **Example Response (Charging A/S):**
 ```
@@ -478,12 +478,12 @@ Generate appropriate response using pattern-matched templates.
 3. 가능하면 다른 케이블로 교체 테스트
 
 위 단계를 시도하신 후에도 문제가 계속되면 AS 접수를 도와드리겠습니다.
-AS 센터: 1544-XXXX (평일 09:00-18:00)
+AS 센터: 1234-5678 (평일 09:00-18:00)
 
 추가 문의 사항이 있으시면 언제든지 말씀해주세요.
 감사합니다.
 
-Meliens 고객센터
+Channel Corp. 고객센터
 ```
 
 **Expected Output:**
@@ -514,7 +514,7 @@ Escalate to specialized teams when required.
 
 **Process:**
 1. Identify escalation target:
-   - A/S issues → AS Center (1544-XXXX)
+   - A/S issues → AS Center (1234-5678)
    - Delivery issues → Logistics team (internal)
    - Complaints → Customer service manager
    - Technical issues → Product team
@@ -570,11 +570,11 @@ Write concrete usage examples demonstrating the SOP in action.
 **Notes**: {Any special considerations or learnings}
 ```
 
-**Example 1 (from Meliens):**
+**Example 1:**
 ```markdown
 ### Example 1: Charging Issue with Troubleshooting
 
-**Scenario**: Customer reports charging problem for vibration cleanser.
+**Scenario**: Customer reports charging problem for electronic product.
 
 **Input:**
 - customer_message: "충전이 안 되는데 어떻게 해야 하나요?"
@@ -597,10 +597,10 @@ Write concrete usage examples demonstrating the SOP in action.
 3. 가능하면 다른 케이블로 교체 테스트
 
 위 단계를 시도하신 후에도 문제가 계속되면 AS 접수를 도와드리겠습니다.
-AS 센터: 1544-XXXX (평일 09:00-18:00)
+AS 센터: 1234-5678 (평일 09:00-18:00)
 
 감사합니다.
-Meliens 고객센터
+Channel Corp. 고객센터
 ```
 
 **Notes**: Most charging issues are resolved at Step 2 (troubleshooting). Only ~20% escalate to AS center.
@@ -665,7 +665,7 @@ Write the complete SOP to a markdown file.
 **File Creation:**
 ```bash
 # In Claude Code
-Write results/meliens/03_sop/meliens_support.sop.md
+Write results/{company}/03_sop/{company}_support.sop.md
 ```
 
 **Post-Save Validation:**
@@ -689,16 +689,16 @@ Create metadata file with SOP information.
 **Metadata Structure:**
 ```json
 {
-  "sop_title": "Meliens Customer Support Assistant",
-  "company": "Meliens",
+  "sop_title": "Channel Corp. Customer Support Assistant",
+  "company": "Channel Corp.",
   "version": "1.0.0",
   "generated_at": "2024-01-28T19:00:00Z",
   "generated_by": "Claude Sonnet 4.5 (Stage 3 Pipeline)",
   "source_files": [
-    "results/meliens/01_clustering/meliens_clustered.xlsx",
-    "results/meliens/01_clustering/meliens_tags.xlsx",
-    "results/meliens/02_extraction/patterns.json",
-    "results/meliens/02_extraction/faq.json"
+    "results/{company}/01_clustering/{company}_clustered.xlsx",
+    "results/{company}/01_clustering/{company}_tags.xlsx",
+    "results/{company}/02_extraction/patterns.json",
+    "results/{company}/02_extraction/faq.json"
   ],
   "statistics": {
     "total_clusters": 10,
@@ -730,24 +730,24 @@ Create metadata file with SOP information.
 
 **File Creation:**
 ```bash
-Write results/meliens/03_sop/metadata.json
+Write results/{company}/03_sop/metadata.json
 ```
 
 ## Examples
 
-### Example 1: Standard SOP Generation (Meliens)
+### Example 1: Standard SOP Generation (Channel Corp.)
 
 **Input:**
-- extraction_output_dir: `results/meliens/02_extraction`
-- company: "Meliens"
-- sop_title: "Meliens Customer Support Assistant"
+- extraction_output_dir: `results/{company}/02_extraction`
+- company: "Channel Corp."
+- sop_title: "Channel Corp. Customer Support Assistant"
 - sop_type: "customer_support"
 - detail_level: "standard"
 
 **Execution Time**: ~25 minutes
 
 **Output:**
-- `meliens_support.sop.md` (1,200 lines)
+- `{company}_support.sop.md` (1,200 lines)
 - `metadata.json`
 
 **SOP Statistics:**
@@ -756,19 +756,19 @@ Write results/meliens/03_sop/metadata.json
 - Troubleshooting Issues: 4
 - Total word count: ~4,000
 
-### Example 2: Concise Troubleshooting SOP (Assacom)
+### Example 2: Concise Troubleshooting SOP (Channel Corp.)
 
 **Input:**
-- extraction_output_dir: `results/assacom/02_extraction`
-- company: "Assacom"
-- sop_title: "Assacom Hardware Troubleshooting Guide"
+- extraction_output_dir: `results/{company}/02_extraction`
+- company: "Channel Corp."
+- sop_title: "Channel Corp. Hardware Troubleshooting Guide"
 - sop_type: "troubleshooting"
 - detail_level: "concise"
 
 **Execution Time**: ~15 minutes
 
 **Output:**
-- `assacom_troubleshooting.sop.md` (600 lines)
+- `{company}_troubleshooting.sop.md` (600 lines)
 - Focus on A/S and technical issues only
 - Minimal examples, core workflows only
 
