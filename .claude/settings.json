@@ -8,8 +8,6 @@
       "Bash(mkdir:*)",
       "Bash(mmdc:*)",
       "Bash(mv:*)",
-      "Bash(npm install:*)",
-      "Bash(brew install:*)",
       "Bash(chmod:*)",
       "Bash(./scripts/check_dependencies.sh:*)",
       "WebFetch(domain:github.com)",
