@@ -6,11 +6,12 @@ Userchat 고객 상담 데이터를 Agent SOP 문서로 자동 변환하는 4단
 
 - **목적**: Excel 고객 상담 데이터 → 재사용 가능한 Agent SOP 문서 자동 생성
 - **방법**: 4단계 파이프라인 (Clustering → Extraction → SOP Generation → Flowchart Generation)
+- **소요 시간**: 15-30분 (Quick ~15분, Standard ~20분, Deep ~30분)
 - **기술 스택**:
   - **Stage 1 (Python)**: Upstage Solar 임베딩 + K-Means 클러스터링 + LLM Fallback 자동화
-  - **Stage 2 (LLM)**: 패턴 추출 + FAQ 생성 + HT/TS 분류
-  - **Stage 3 (LLM)**: Agent SOP 문서 생성
-  - **Stage 4 (LLM + Mermaid)**: 플로우차트 자동 생성 (선택)
+  - **Stage 2 (LLM)**: 패턴 추출 + FAQ 생성 + HT/TS 분류 (병렬 처리 가능)
+  - **Stage 3 (LLM)**: Agent SOP 문서 생성 (병렬 처리 가능)
+  - **Stage 4 (LLM + Mermaid)**: 플로우차트 자동 생성 (필수, SVG 선택)
 
 ## 빠른 시작
 
@@ -29,30 +30,39 @@ cp .env.example .env
 
 ### 3. 파이프라인 실행
 
-#### Stage 1: 클러스터링
+#### 통합 파이프라인 (권장)
 
-**Claude Skill 사용 (권장)**:
+**Claude Skill**:
+```bash
+/userchat-to-sop-pipeline
+```
+
+**특징:**
+- 한 번에 Stage 1-4 자동 실행
+- 각 단계별 리뷰 지점 제공
+- 병렬 처리 최적화 (시간 단축)
+- 소요 시간: Quick 15분, Standard 20분, Deep 30분
+
+---
+
+#### 개별 실행 (단계별 제어 필요 시)
+
+**Stage 1: 클러스터링**
 ```bash
 /stage1-clustering
 ```
 
-#### Stage 2: 패턴 추출
-
-**Claude Skill**:
+**Stage 2: 패턴 추출**
 ```bash
 /stage2-extraction
 ```
 
-#### Stage 3: SOP 생성
-
-**Claude Skill**:
+**Stage 3: SOP 생성**
 ```bash
 /stage3-sop-generation
 ```
 
-#### Stage 4: 플로우차트 생성 (선택)
-
-**Claude Skill**:
+**Stage 4: 플로우차트 생성**
 ```bash
 /stage4-flowchart-generation
 ```
@@ -186,9 +196,8 @@ results/{company}/03_sop/
 - [x] 색상 코딩 (Success/Warning/Error/Info)
 - [x] 플로우차트 요약 리포트 생성
 
-### Phase 6: 통합 (예정)
-- [ ] 전체 파이프라인 연결
-- [ ] 문서화 완성
+### Phase 6: 통합  ✅
+- [x] 전체 파이프라인 연결
 
 ## SOP 템플릿 (HT/TS)
 
@@ -241,6 +250,16 @@ Stage 2 패턴 추출 단계에서 각 클러스터를 자동으로 HT/TS로 분
 
 ## Claude Code Skills
 
+### `/userchat-to-sop-pipeline`
+**통합 파이프라인 (Stage 1-4 자동 실행, 권장)**
+- 한 번에 전체 4단계 파이프라인 실행
+- Stage 간 자동 연결 및 검증
+- 각 단계별 리뷰 지점 제공 (auto_proceed 옵션)
+- 병렬 처리 최적화 (Stage 2: 3 subagents, Stage 3: SOP별)
+- 파라미터 커스터마이제이션 (Quick/Standard/Comprehensive)
+- 기본값: Stage 4 포함, Markdown 플로우차트, Standard 모드
+- 소요 시간: Quick 15분, Standard 20분, Comprehensive 30분
+
 ### `/stage1-clustering`
 대화형 Stage 1 실행 - 파라미터 선택 가이드 제공
 - 데이터 파일 자동 스캔 및 선택
@@ -287,19 +306,24 @@ Mermaid 플로우차트 자동 생성 (선택)
 - **모델**: Claude Sonnet 4.5 (1M context)
 - **작업**: 패턴 추출, FAQ 생성, HT/TS 분류
 - **출력**: patterns.json, patterns_enriched.json, faq.json, strategies.json
+- **최적화**: 클러스터별 병렬 처리 (3 subagents), 샘플 개수 조정 (quick: 10개, standard: 20개)
+- **시간**: quick 5분, standard 8-10분, deep 15분
 
 ### Stage 3 (LLM)
 - **모델**: Claude Sonnet 4.5 (1M context)
 - **작업**: SOP 문서 작성, 케이스별 응답 템플릿 생성
-- **출력**: TS/HT SOP 문서, metadata.json, generation_summary.md
+- **출력**: TS/HT SOP 문서 (다중 파일), metadata.json, generation_summary.md
 - **보안**: 플레이스홀더 사용, 민감 정보 일반화
+- **최적화**: SOP별 병렬 생성 가능, patterns_enriched.json 활용 (Stage 2 필수)
+- **시간**: concise 4분, standard 6분, comprehensive 10분
 
 ### Stage 4 (LLM + Mermaid)
 - **모델**: Claude Sonnet 4.5 (플로우차트 구조 분석)
 - **다이어그램**: Mermaid.js (flowchart syntax)
-- **변환**: @mermaid-js/mermaid-cli (SVG 생성)
-- **작업**: SOP 구조 분석 → Mermaid 생성 → SVG 변환
-- **출력**: *_FLOWCHART.md, *_flowchart.svg, flowchart_generation_summary.md
+- **변환**: @mermaid-js/mermaid-cli (SVG 생성, 선택)
+- **작업**: SOP 구조 분석 → Mermaid 생성 → SVG 변환 (optional)
+- **출력**: *_FLOWCHART.md (필수), *_flowchart.svg (선택)
+- **시간**: markdown only 5분, with SVG 8분
 
 ### 공통
 - **데이터 처리**: pandas, numpy, openpyxl
