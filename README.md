@@ -6,10 +6,10 @@ Userchat 고객 상담 데이터를 Agent SOP 문서로 자동 변환하는 4단
 
 - **목적**: Excel 고객 상담 데이터 → 재사용 가능한 Agent SOP 문서 자동 생성
 - **방법**: 4단계 파이프라인 (Clustering → Extraction → SOP Generation → Flowchart Generation)
-- **소요 시간**: 15-30분 (Quick ~15분, Standard ~20분, Deep ~30분)
+- **소요 시간**: Quick ~15분; Standard: ~25분 (auto_proceed) — ~31분 (manual review); Comprehensive ~30분
 - **기술 스택**:
   - **Stage 1 (Python)**: Upstage Solar 임베딩 + K-Means 클러스터링 + LLM Fallback 자동화
-  - **Stage 2 (LLM)**: 패턴 추출 + FAQ 생성 + HT/TS 분류 (병렬 처리 가능)
+  - **Stage 2 (LLM)**: 패턴 추출 + FAQ 생성 + HT/TS 분류
   - **Stage 3 (LLM)**: Agent SOP 문서 생성 (병렬 처리 가능)
   - **Stage 4 (LLM + Mermaid)**: 플로우차트 자동 생성 (필수, SVG 선택)
 
@@ -40,8 +40,8 @@ cp .env.example .env
 **특징:**
 - 한 번에 Stage 1-4 자동 실행
 - 각 단계별 리뷰 지점 제공
-- 병렬 처리 최적화 (시간 단축)
-- 소요 시간: Quick 15분, Standard 20분, Deep 30분
+- Stage 간 자동 연결 및 검증
+  - 소요 시간: Quick ~15분; Standard: ~25분 (auto_proceed) — ~31분 (manual review); Comprehensive ~30분
 
 ---
 
@@ -255,10 +255,10 @@ Stage 2 패턴 추출 단계에서 각 클러스터를 자동으로 HT/TS로 분
 - 한 번에 전체 4단계 파이프라인 실행
 - Stage 간 자동 연결 및 검증
 - 각 단계별 리뷰 지점 제공 (auto_proceed 옵션)
-- 병렬 처리 최적화 (Stage 2: 3 subagents, Stage 3: SOP별)
+- Stage 3 병렬 생성 최적화 (SOP별)
 - 파라미터 커스터마이제이션 (Quick/Standard/Comprehensive)
 - 기본값: Stage 4 포함, Markdown 플로우차트, Standard 모드
-- 소요 시간: Quick 15분, Standard 20분, Comprehensive 30분
+- 소요 시간: Quick ~15분; Standard: ~25분 (auto_proceed) — ~31분 (manual review); Comprehensive ~30분
 
 ### `/stage1-clustering`
 대화형 Stage 1 실행 - 파라미터 선택 가이드 제공
@@ -306,8 +306,8 @@ Mermaid 플로우차트 자동 생성 (선택)
 - **모델**: Claude Sonnet 4.5 (1M context)
 - **작업**: 패턴 추출, FAQ 생성, HT/TS 분류
 - **출력**: patterns.json, patterns_enriched.json, faq.json, strategies.json
-- **최적화**: 클러스터별 병렬 처리 (3 subagents), 샘플 개수 조정 (quick: 10개, standard: 20개)
-- **시간**: quick 5분, standard 8-10분, deep 15분
+- **최적화**: 샘플 개수 조정 (quick: 10개, standard: 20개, deep: 20개+enrichment)
+- **시간**: quick 10-15분, standard 15-25분, deep 25-35분
 
 ### Stage 3 (LLM)
 - **모델**: Claude Sonnet 4.5 (1M context)
