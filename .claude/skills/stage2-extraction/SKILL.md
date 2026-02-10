@@ -52,9 +52,12 @@ This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and 
   - List of IDs: e.g., `"0,2,5,7"` for specific clusters
 
 - **extraction_depth** (default: "standard"): Level of detail
-  - `"quick"`: Basic patterns and keywords (5 min per 10 clusters)
-  - `"standard"`: Patterns + FAQ + response strategies (10 min per 10 clusters)
-  - `"deep"`: Full analysis with examples and edge cases (20 min per 10 clusters)
+  - `"quick"`: 10 samples/cluster, 모든 JSON 생성 (간소화, ~10-15분)
+    - 빠른 분석, FAQ/Strategies 간소
+  - `"standard"`: 20 samples/cluster, 모든 JSON 생성 (상세, ~15-25분)
+    - 균형잡힌 분석, FAQ/Strategies 전체
+  - `"deep"`: 20 samples/cluster + enrichment, 모든 JSON 생성 (~25-35분)
+    - patterns_enriched.json 포함, 심층 분석
 
 - **output_format** (default: "json"): Output file format
   - `"json"`: Structured JSON (recommended for Stage 3)
@@ -115,12 +118,15 @@ Key Insight: A/S inquiries dominate, need detailed response templates
 For each cluster, identify common patterns, inquiry types, and response needs by analyzing **actual customer messages**.
 
 **Constraints:**
-- You MUST analyze 20 sample messages per cluster using Python
+- You MUST analyze sample messages per cluster based on extraction_depth:
+  - quick: 10 samples/cluster
+  - standard: 20 samples/cluster (기본값)
+  - deep: 20 samples/cluster + enrichment
 - You MUST identify 3-8 distinct patterns within each cluster
 - You MUST extract actual customer phrases from samples (DO NOT paraphrase or guess!)
 - You MUST NOT infer or assume patterns based on cluster labels alone
 - You MUST categorize patterns by: `정보_요청`, `문제_신고`, `프로세스_문의`, `불만_제기`
-- You SHOULD measure frequency by counting pattern occurrences in 20 samples
+- You SHOULD measure frequency by counting pattern occurrences in samples
 - You MAY group similar patterns together
 - You MUST output patterns in Korean (original customer language)
 
@@ -130,9 +136,17 @@ For each cluster, identify common patterns, inquiry types, and response needs by
 
 **Sample Extraction (Required First Step):**
 
-Use Python to extract 20 random samples per cluster:
+Use Python to extract samples per cluster based on extraction_depth:
 
 ```python
+# Determine sample size based on extraction_depth
+if extraction_depth == "quick":
+    n_samples = 10
+elif extraction_depth == "standard":
+    n_samples = 20
+else:  # deep
+    n_samples = 20
+
 # Extract samples for each cluster
 import pandas as pd
 
@@ -140,9 +154,9 @@ df = pd.read_excel('{clustering_output_dir}/{prefix}_clustered.xlsx')
 
 for cluster_id in target_clusters:
     cluster_data = df[df['cluster_id'] == cluster_id]
-    samples = cluster_data.sample(n=20, random_state=42)
+    samples = cluster_data.sample(n=n_samples, random_state=42)
 
-    print(f"\n=== Cluster {cluster_id} Samples ===")
+    print(f"\n=== Cluster {cluster_id} Samples ({n_samples}개) ===")
     for i, (_, row) in enumerate(samples.iterrows(), 1):
         print(f"{i}. {row['enhanced_text'][:250]}")
 ```

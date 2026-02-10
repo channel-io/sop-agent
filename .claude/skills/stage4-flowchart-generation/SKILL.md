@@ -65,17 +65,35 @@ Verify Stage 3 SOP files and Mermaid CLI installation.
 **Actions:**
 - Check `sop_dir` exists and contains `.sop.md` files
 - Verify Mermaid CLI is installed: `mmdc --version`
-- If not installed, guide user to install: `npm install -g @mermaid-js/mermaid-cli`
+- If CLI not installed:
+  - ⚠️ Warn user that SVG generation will be skipped
+  - Automatically adjust output_format to "markdown" only
+  - Continue with Mermaid markdown generation
 - Count number of SOPs to process
 - Filter by target_sops parameter
 
-**Expected Output:**
+**Expected Output (CLI installed):**
 ```
 ✅ Stage 4 준비 완료
   - SOP 디렉토리: results/{company}/03_sop
   - 발견된 SOP: 7개 (TS: 4개, HT: 3개)
   - 처리 대상: 7개 (전체) 또는 4개 (TS만) 또는 3개 (HT만)
   - Mermaid CLI: 설치됨 (v11.12.0)
+  - 출력 형식: Markdown + SVG
+```
+
+**Expected Output (CLI not installed):**
+```
+✅ Stage 4 준비 완료
+  - SOP 디렉토리: results/{company}/03_sop
+  - 발견된 SOP: 7개 (TS: 4개, HT: 3개)
+  - 처리 대상: 7개 (전체) 또는 4개 (TS만) 또는 3개 (HT만)
+  - Mermaid CLI: ❌ 미설치
+  - 출력 형식: Markdown만 (SVG 생성 건너뜀)
+
+⚠️ SVG 이미지가 필요하면 나중에 설치 후 변환 가능:
+   npm install -g @mermaid-js/mermaid-cli
+   mmdc -i TS_001_FLOWCHART.md -o TS_001_flowchart.svg -b transparent
 ```
 
 ### 2. Analyze SOP Structure
@@ -116,20 +134,26 @@ Write complete flowchart documentation.
 
 **Expected Duration:** 1 minute per SOP
 
-### 5. Convert to SVG Image
+### 5. Convert to SVG Image (CLI Required)
 
-Use Mermaid CLI to generate SVG images.
+Use Mermaid CLI to generate SVG images if installed.
 
 **Actions:**
-```bash
-mmdc -i {SOP_ID}_FLOWCHART.md -o {SOP_ID}_flowchart.svg -b transparent
-```
+- Check if Mermaid CLI is installed
+- **If installed:**
+  ```bash
+  mmdc -i {SOP_ID}_FLOWCHART.md -o {SOP_ID}_flowchart.svg -b transparent
+  ```
+- **If not installed:**
+  - Skip SVG generation
+  - Note in summary that markdown files can be viewed in VSCode or GitHub
 
-**Expected Duration:** 10-20 seconds per SOP
+**Expected Duration:** 10-20 seconds per SOP (if CLI installed)
 
 **Troubleshooting:**
 - Parse error: Remove quotes and emoticons from node text
 - Retry: Re-run mmdc command
+- CLI not found: Skip SVG, continue with markdown only
 
 ### 6. Generate Summary Report
 
@@ -198,6 +222,25 @@ target_sops: ["TS_001", "HT_001"]
 - 2 SVG images
 
 **Time:** ~4 minutes
+
+### Example 4: Markdown Only (CLI 없음)
+
+**Input:**
+```
+sop_dir: results/{company}/03_sop
+target_sops: all
+```
+
+**Detected:** Mermaid CLI not installed
+
+**Output:**
+- 7 Markdown files only (TS_001~004_FLOWCHART.md, HT_001~003_FLOWCHART.md)
+- ⚠️ SVG 생성 건너뜀
+- 1 Summary report
+
+**Time:** ~8 minutes (SVG 변환 시간 제외)
+
+**Note:** Markdown 파일은 VSCode Mermaid 확장 또는 GitHub에서 바로 렌더링됨
 
 ## Viewing Flowcharts
 

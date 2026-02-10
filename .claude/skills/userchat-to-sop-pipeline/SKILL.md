@@ -16,25 +16,25 @@ This SOP orchestrates the complete end-to-end pipeline for transforming Excel cu
 ```
 Excel Input (고객 상담 데이터)
     ↓
-Stage 1: Clustering (Python) [3-5 min]
+Stage 1: Clustering (Python) [5-10 min]
     → clustered_data.xlsx, cluster_tags.xlsx, analysis_report.md
     ↓
-Stage 2: Pattern Extraction (LLM) [5-10 min]
+Stage 2: Pattern Extraction (LLM) [10-35 min]
     → patterns.json, faq.json, response_strategies.json, keywords.json
     ↓
-Stage 3: SOP Generation (LLM) [3-5 min]
+Stage 3: SOP Generation (LLM) [10-25 min]
     → TS_*.sop.md, HT_*.sop.md, metadata.json
     ↓
-Stage 4: Flowchart Generation (LLM) [3-5 min, 필수]
+Stage 4: Flowchart Generation (LLM) [5-10 min, (기본 활성화)]
     → *_FLOWCHART.md (Mermaid markdown, SVG 선택)
     ↓
 Output: Ready-to-deploy Agent SOP + Visual Flowcharts
 ```
 
-**Total Time**: 15-30 minutes (Stage 1-4 full pipeline)
-- Quick mode: ~15 minutes
-- Standard mode: ~20 minutes
-- Comprehensive mode: ~30 minutes
+**Total Time**: 30-80 minutes (Stage 1-4 full pipeline)
+- Quick mode: ~40 minutes
+- Standard mode: ~55 minutes
+- Comprehensive mode: ~70-80 minutes
 
 ## Parameters
 
@@ -77,9 +77,11 @@ Output: Ready-to-deploy Agent SOP + Visual Flowcharts
   - `"standard"`: Balanced (~1000 lines)
   - `"comprehensive"`: Full detail (~2000 lines)
 
-- **generate_flowcharts** (default: true): Generate flowcharts in Stage 4
+- **generate_flowcharts** (default: true): Generate flowcharts in Stage 4 (기본 활성화 — 옵션으로 비활성화 가능)
   - `true`: Generate Mermaid flowcharts after SOP generation (recommended)
   - `false`: Skip Stage 4 (flowchart generation)
+
+Note: Stage 4 (Flowchart Generation)은 기본적으로 활성화되어 있으나 옵션으로 비활성화할 수 있습니다. 플로우차트 생성을 건너뛰려면 `generate_flowcharts=false`로 설정하거나 검토 단계에서 생성 여부를 거부하세요.
 
 - **flowchart_target** (default: "all"): Which SOPs to generate flowcharts for
   - `"all"`: Generate for all SOPs (both TS and HT, recommended)
@@ -182,9 +184,9 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 - `extraction_summary.md` - Summary and recommendations
 
 **Expected Duration:**
-- Quick: ~5 minutes (병렬 에이전트)
-- Standard: ~8 minutes (병렬 에이전트)
-- Deep: ~15 minutes
+- Quick: ~10-15 minutes
+- Standard: ~15-25 minutes
+- Deep: ~25-35 minutes
 
 **Quality Checks:**
 - [ ] All JSON files generated and valid
@@ -283,9 +285,11 @@ Generate Mermaid flowcharts from SOP documents for visual process documentation.
 - [ ] Escalation paths are visible
 - [ ] SVG images generated (optional, if CLI available)
 
-**Skip Conditions:**
-- `generate_flowcharts=false` (user explicitly opts out)
-- User declines during review pause
+**Skip Conditions (Stage 4 is optional; default: enabled):**
+- `generate_flowcharts=false` (사용자가 명시적으로 비활성화)
+- User declines during review pause (검토 단계에서 생성 거부)
+
+설명: Stage 4은 기본적으로 활성화되어 있으나 필요에 따라 건너뛸 수 있습니다. 위 두 조건 중 하나가 충족되면 플로우차트 생성은 수행되지 않습니다.
 
 ### 6. Validate Complete Pipeline
 
@@ -454,15 +458,15 @@ auto_proceed=false  # Pause for review after each stage
 ```
 
 **Timeline:**
-- Stage 1 (Clustering): 5 minutes
-- Review & Approve: 2 minutes
-- Stage 2 (Extraction): 8 minutes (병렬 에이전트)
-- Review & Approve: 2 minutes
-- Stage 3 (SOP Generation): 6 minutes (병렬 에이전트)
-- Review & Approve: 2 minutes
-- Stage 4 (Flowcharts - Markdown): 5 minutes
-- Validation & Summary: 1 minute
-- **Total**: 31 minutes
+- Stage 1 (Clustering): 6 minutes
+- Review & Approve: 3 minutes
+- Stage 2 (Extraction): 20 minutes
+- Review & Approve: 5 minutes
+- Stage 3 (SOP Generation): 15 minutes (병렬 생성)
+- Review & Approve: 3 minutes
+- Stage 4 (Flowcharts - Markdown): 8 minutes
+- Validation & Summary: 2 minutes
+- **Total**: 62 minutes
 
 **Results:**
 - 10 clusters, 37 patterns, 52 FAQ pairs
