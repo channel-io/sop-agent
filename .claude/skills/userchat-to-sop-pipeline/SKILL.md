@@ -64,13 +64,11 @@ Output: Ready-to-deploy Agent SOP + Visual Flowcharts
   - `"auto"`: Automatic optimal K selection
   - Integer: Fixed K value
 
-- **extraction_depth** (default: "standard"): Pattern extraction detail (Stage 2)
-  - `"quick"`: Patterns + Keywords + FAQ + Strategies (간소화, ~5-8분)
-    - FAQ 10-15개, Strategies 핵심만, 빠른 분석
-  - `"standard"`: Patterns + Keywords + FAQ + Strategies (상세, ~8-12분)
-    - FAQ 30-50개, Strategies 전체, 균형잡힌 분석
-  - `"deep"`: Standard + patterns_enriched.json + 예시/edge cases (~15-20분)
-    - 샘플 임베딩, 더 많은 예시, 심층 분석
+- **n_samples_per_cluster** (default: 20): Number of samples per cluster for Stage 2
+  - Standard analysis with 20 samples per cluster
+  - Generates: Patterns + Keywords + FAQ (30-50개) + Strategies + patterns_enriched.json
+  - Time: ~8-12분 for typical dataset
+  - 더 많은 샘플이 필요하면 30, 50 등으로 조정 가능
 
 - **sop_detail_level** (default: "standard"): SOP detail level (Stage 3)
   - `"concise"`: Minimal SOP (~500 lines)
@@ -93,8 +91,8 @@ Note: Stage 4 (Flowchart Generation)은 기본적으로 활성화되어 있으�
   - `"svg"`: SVG images only (requires Mermaid CLI)
   - `"both"`: Both markdown and SVG
 
-- **auto_proceed** (default: false): Automatic stage progression
-  - `true`: Auto-proceed through stages without manual review
+- **auto_proceed** (default: true): Automatic stage progression
+  - `true`: Auto-proceed through stages without manual review (recommended)
   - `false`: Pause after each stage for review
 
 ## Steps
@@ -170,7 +168,7 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 # With parameters:
 # - clustering_output_dir: $output_base_dir/01_clustering
 # - company: $company
-# - extraction_depth: $extraction_depth
+# - n_samples_per_cluster: $n_samples_per_cluster
 ```
 
 **Inputs:**
@@ -184,9 +182,9 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 - `extraction_summary.md` - Summary and recommendations
 
 **Expected Duration:**
-- Quick: ~10-15 minutes
-- Standard: ~15-25 minutes
-- Deep: ~25-35 minutes
+- 10 samples/cluster: ~10-15 minutes
+- 20 samples/cluster (기본값): ~15-25 minutes
+- 30 samples/cluster: ~25-35 minutes
 
 **Quality Checks:**
 - [ ] All JSON files generated and valid
@@ -443,13 +441,13 @@ Present pipeline results to stakeholders.
 
 **Parameters:**
 ```bash
-input_file="data/raw/user_chat_{company}.xlsx"
+input_file="data/user_chat_{company}.xlsx"
 company="Channel Corp."
 output_base_dir="results/channelcorp"
 sample_size="all"  # Full dataset
 tagging_mode="agent"
 k="auto"
-extraction_depth="standard"
+n_samples_per_cluster=20
 sop_detail_level="standard"
 generate_flowcharts=true  # Default: enabled
 flowchart_target="all"  # Default: all SOPs
@@ -486,7 +484,7 @@ output_base_dir="results/channelcorp"
 sample_size="all"
 tagging_mode="agent"
 k="auto"
-extraction_depth="standard"
+n_samples_per_cluster=20
 sop_detail_level="standard"
 generate_flowcharts=true  # Default: enabled
 flowchart_target="all"  # Default: all SOPs
@@ -519,7 +517,7 @@ output_base_dir="results/test"
 sample_size=1000
 tagging_mode="agent"
 k=15
-extraction_depth="quick"
+n_samples_per_cluster=10
 sop_detail_level="concise"
 generate_flowcharts=true  # Default: enabled
 flowchart_target="ts_only"  # Only TS for quick test
@@ -553,7 +551,7 @@ auto_proceed=true  # Automatic, no pauses
 ### Issue: Stage 2 Takes Too Long
 
 **Solution:**
-1. Reduce `extraction_depth` to "quick" or "standard"
+1. Reduce `n_samples_per_cluster` to 10 or 20 (standard)
 2. Use `focus_clusters="top_10"` to analyze only top clusters
 3. Consider re-running Stage 1 with lower K value
 
@@ -561,7 +559,7 @@ auto_proceed=true  # Automatic, no pauses
 
 **Solution:**
 1. Review Stage 2 extraction quality
-2. Re-run Stage 2 with `extraction_depth="deep"`
+2. Re-run Stage 2 with `n_samples_per_cluster=30`
 3. Manually enhance Stage 3 output with company-specific details
 4. Include more sample messages in extraction
 
@@ -624,7 +622,7 @@ Choose configuration based on use case:
 
 **Quick Prototype** (~15 min, Stage 1-4):
 - sample_size: 1000
-- extraction_depth: "quick"
+- n_samples_per_cluster: 10
 - sop_detail_level: "concise"
 - generate_flowcharts: true
 - flowchart_target: "ts_only"
@@ -632,15 +630,15 @@ Choose configuration based on use case:
 
 **Standard Production** (~20 min, Stage 1-4, 기본값):
 - sample_size: "all"
-- extraction_depth: "standard"
+- n_samples_per_cluster: 20 (기본값)
 - sop_detail_level: "standard"
 - generate_flowcharts: true
 - flowchart_target: "all"
 - flowchart_format: "markdown"
 
-**Comprehensive Analysis** (~30 min, Stage 1-4):
+**Thorough Analysis** (~25 min, Stage 1-4):
 - sample_size: "all"
-- extraction_depth: "deep"
+- n_samples_per_cluster: 30 (더 많은 샘플)
 - sop_detail_level: "comprehensive"
 - generate_flowcharts: true
 - flowchart_target: "all"
@@ -648,7 +646,7 @@ Choose configuration based on use case:
 
 **Legacy Mode** (~15 min, Stage 1-3 only):
 - sample_size: "all"
-- extraction_depth: "standard"
+- n_samples_per_cluster: 20
 - sop_detail_level: "standard"
 - generate_flowcharts: false  # Skip Stage 4
 

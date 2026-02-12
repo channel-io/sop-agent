@@ -51,13 +51,11 @@ This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and 
   - `"all"`: Extract from all clusters
   - List of IDs: e.g., `"0,2,5,7"` for specific clusters
 
-- **extraction_depth** (default: "standard"): Level of detail
-  - `"quick"`: 10 samples/cluster, 모든 JSON 생성 (간소화, ~10-15분)
-    - 빠른 분석, FAQ/Strategies 간소
-  - `"standard"`: 20 samples/cluster, 모든 JSON 생성 (상세, ~15-25분)
-    - 균형잡힌 분석, FAQ/Strategies 전체
-  - `"deep"`: 20 samples/cluster + enrichment, 모든 JSON 생성 (~25-35분)
-    - patterns_enriched.json 포함, 심층 분석
+- **n_samples_per_cluster** (default: 20): Number of samples to analyze per cluster
+  - Example: `10`, `20`, `30`, `50`
+  - Recommended: 20 (충분한 패턴 파악 + 합리적인 실행 시간)
+  - 더 많은 샘플이 필요하면 이 값을 조정하세요
+  - Enrichment (patterns_enriched.json) is always generated
 
 - **output_format** (default: "json"): Output file format
   - `"json"`: Structured JSON (recommended for Stage 3)
@@ -118,10 +116,7 @@ Key Insight: A/S inquiries dominate, need detailed response templates
 For each cluster, identify common patterns, inquiry types, and response needs by analyzing **actual customer messages**.
 
 **Constraints:**
-- You MUST analyze sample messages per cluster based on extraction_depth:
-  - quick: 10 samples/cluster
-  - standard: 20 samples/cluster (기본값)
-  - deep: 20 samples/cluster + enrichment
+- You MUST analyze n_samples_per_cluster messages per cluster (기본값: 20)
 - You MUST identify 3-8 distinct patterns within each cluster
 - You MUST extract actual customer phrases from samples (DO NOT paraphrase or guess!)
 - You MUST NOT infer or assume patterns based on cluster labels alone
@@ -136,16 +131,11 @@ For each cluster, identify common patterns, inquiry types, and response needs by
 
 **Sample Extraction (Required First Step):**
 
-Use Python to extract samples per cluster based on extraction_depth:
+Use Python to extract samples per cluster:
 
 ```python
-# Determine sample size based on extraction_depth
-if extraction_depth == "quick":
-    n_samples = 10
-elif extraction_depth == "standard":
-    n_samples = 20
-else:  # deep
-    n_samples = 20
+# Use n_samples_per_cluster parameter (default: 20)
+n_samples = n_samples_per_cluster  # e.g., 20
 
 # Extract samples for each cluster
 import pandas as pd
@@ -550,7 +540,7 @@ Save all extracted data in structured JSON and/or Markdown format.
     ],
     "total_clusters": 10,
     "analyzed_clusters": 10,
-    "extraction_depth": "standard"
+    "n_samples_per_cluster": 20
   },
   "clusters": [
     {
@@ -731,14 +721,14 @@ python3 scripts/enrich_patterns.py \
 - clustering_output_dir: `results/assacom`
 - company: "Assacom"
 - focus_clusters: "top_10"
-- extraction_depth: "standard"
+- n_samples_per_cluster: 20 (기본값)
 
 **Execution Method:**
 1. Use Bash + Python to extract 20 samples per cluster
-2. Use Task agent (general-purpose) to analyze all clusters in parallel
-3. Save results to JSON files
+2. Analyze clusters sequentially in main agent (순차 처리)
+3. Save results to JSON files after each analysis step
 
-**Actual Execution Time**: **~5 minutes** ⚡
+**Actual Execution Time**: **~8-12 minutes**
 
 **Output:**
 - 10 clusters analyzed (645건, 64.5% coverage)
@@ -751,24 +741,25 @@ python3 scripts/enrich_patterns.py \
 - Real customer expressions discovered: "안심번호로 배송조회 불가", "11번가 할인구매가 적용"
 - Unexpected patterns found: "전화 상담 선호" (15%), "부품 추가/변경" (40%)
 - Brand-specific tone: Assacom uses friendly emojis (🙌😊) and emphasizes quality
+- patterns_enriched.json generated with conversation samples and tone-and-manner examples
 
-### Example 2: Deep Extraction (All Clusters with Edge Cases)
+### Example 2: Higher Sample Count (More Thorough Analysis)
 
 **Parameters:**
 - clustering_output_dir: `results/meliens`
 - company: "Meliens"
 - focus_clusters: "all"
-- extraction_depth: "deep"
+- n_samples_per_cluster: 30 (더 많은 샘플)
 
-**Execution Time**: ~15-20 minutes
+**Execution Time**: ~20-25 minutes
 
 **Output:**
-- All 20 clusters analyzed
+- All 20 clusters analyzed with 30 samples each
 - 80+ patterns extracted (4-6 per cluster)
 - 70+ FAQ pairs generated (5-7 per cluster)
-- Detailed response strategies with decision trees
-- Comprehensive keyword taxonomy
-- Edge cases and exceptions documented
+- More comprehensive pattern coverage
+- Edge cases and exceptions better captured
+- patterns_enriched.json with richer sample diversity
 
 ## Troubleshooting
 
@@ -847,24 +838,25 @@ Stage 2 is intentionally LLM-based because:
 
 ### Time Estimates (Updated based on actual execution)
 
-| Extraction Depth | Clusters | Time | Method |
-|------------------|----------|------|--------|
-| Quick | 5 | ~3-5 min | Basic patterns + keywords |
-| Standard | 10 | ~5-10 min | Patterns + FAQ + strategies (with agent) |
-| Deep | 10 | ~15-20 min | Full analysis + examples + edge cases |
+| Samples/Cluster | Clusters | Time | Notes |
+|-----------------|----------|------|-------|
+| 10 | 10 | ~5-8 min | 빠른 분석, enrichment 포함 |
+| 20 (기본값) | 10 | ~8-15 min | 균형잡힌 분석, enrichment 포함 |
+| 30 | 10 | ~15-25 min | 심층 분석, enrichment 포함 |
 
 **Actual Performance (Assacom Case):**
-- 10 clusters analyzed with real samples: **~5 minutes**
-- Using Task agent (general-purpose) for parallel analysis: **highly efficient**
+- 10 clusters analyzed with real samples: **~8-12 minutes**
+- Sequential analysis in main agent: **안정적이고 빠름** (서브에이전트 사용 시 hanging 발생)
 - Sample collection (Python): < 1 second
-- Pattern extraction (LLM): 2-3 minutes
-- FAQ generation (LLM): 1-2 minutes
-- File saving: < 1 second
+- Pattern extraction per cluster: ~1-2분
+- FAQ generation (통합): 2-3분
+- Enrichment (Step 7): 1-2분
 
 **Efficiency Tips:**
-1. Use Task agent with `subagent_type=general-purpose` for batch analysis
-2. Provide all cluster samples at once for parallel processing
+1. ⚠️ **서브에이전트 사용 금지** - Task agent 사용 시 성능 저하 및 hanging 발생
+2. **메인 에이전트에서 순차 처리** - 각 클러스터를 순차적으로 분석 (더 빠르고 안정적)
 3. Use `random_state=42` for consistent sampling
 4. Focus on top 10 clusters first (covers 60-70% of data)
+5. Enrichment는 마지막에 한 번만 실행 (Step 7)
 
 *Note: Time varies based on cluster complexity and domain familiarity.*
