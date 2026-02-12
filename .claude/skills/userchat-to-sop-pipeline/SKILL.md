@@ -16,58 +16,46 @@ This SOP orchestrates the complete end-to-end pipeline for transforming Excel cu
 ```
 Excel Input (고객 상담 데이터)
     ↓
-Stage 1: Clustering (Python) [5-10 min]
+Stage 1: Clustering (Python) [~3 min]
     → clustered_data.xlsx, cluster_tags.xlsx, analysis_report.md
     ↓
-Stage 2: Pattern Extraction (LLM) [10-35 min]
+Stage 2: Pattern Extraction (LLM) [5-10 min]
     → patterns.json, faq.json, response_strategies.json, keywords.json
     ↓
-Stage 3: SOP Generation (LLM) [10-25 min]
+Stage 3: SOP Generation (LLM) [~5 min]
     → TS_*.sop.md, HT_*.sop.md, metadata.json
     ↓
-Stage 4: Flowchart Generation (LLM) [5-10 min, (기본 활성화)]
+Stage 4: Flowchart Generation (LLM) [~4 min, (기본 활성화)]
     → *_FLOWCHART.md (Mermaid markdown, SVG 선택)
     ↓
 Output: Ready-to-deploy Agent SOP + Visual Flowcharts
 ```
 
-**Total Time**: 30-80 minutes (Stage 1-4 full pipeline)
-- Quick mode: ~40 minutes
-- Standard mode: ~55 minutes
-- Comprehensive mode: ~70-80 minutes
+**Total Time**: 16-26 minutes (Stage 1-4 full pipeline)
+- Quick mode: ~12-15 minutes (2 + 3 + 3 + 2)
+- Standard mode: ~16-22 minutes (3 + 7 + 5 + 4)
+- Comprehensive mode: ~22-26 minutes (3 + 12 + 5 + 4)
 
 ## Parameters
 
-### Required
-- **input_file**: Path to Excel file with customer support chat data
-  - Example: `data/raw/user_chat_{company}.xlsx`
-  - Must have "UserChat data" and "Message data" sheets
+### Stage 1 Parameters (대화형 자동 수집)
+Stage 1은 `/stage1-clustering` 스킬을 호출하여 **대화형으로 파라미터를 수집**합니다.
+- `input_file`: 파일 선택 (AskUserQuestion)
+- `company`: 파일명에서 자동 추출
+- `output_dir`: 자동 제안 (results/{company})
+- `sample_size`: 기본값 1000 (조정 가능)
+- `tagging_mode`: 기본값 "agent" (조정 가능)
+- `k`: 기본값 "auto" (조정 가능)
 
-- **company**: Company name
-  - Example: "Channel Corp."
-  - Used throughout all stages for context
+**Note:** Stage 1 실행 시 대화형으로 파라미터를 선택하므로, Pipeline 실행 시 별도 입력이 필요하지 않습니다.
 
-- **output_base_dir**: Base output directory
-  - Example: `results/{company}`
-  - Structure: `{output_base_dir}/{01_clustering,02_extraction,03_sop}/`
+---
 
-### Optional
-- **sample_size** (default: 1000): Data sampling for Stage 1
-  - 1000: Standard analysis (recommended default)
-  - `"all"`: Full dataset (only if explicitly needed)
-
-- **tagging_mode** (default: "agent"): Clustering tagging method (Stage 1)
-  - `"agent"`: Fast unified tagging (5-15 sec, industry-adaptive, recommended)
-  - `"api"`: Independent tagging (30 sec, hardcoded categories)
-
-- **k** (default: "auto"): Number of clusters (Stage 1)
-  - `"auto"`: Automatic optimal K selection
-  - Integer: Fixed K value
-
+### Optional Parameters (Stage 2-4)
 - **n_samples_per_cluster** (default: 20): Number of samples per cluster for Stage 2
   - Standard analysis with 20 samples per cluster
   - Generates: Patterns + Keywords + FAQ (30-50개) + Strategies + patterns_enriched.json
-  - Time: ~8-12분 for typical dataset
+  - Time: ~5-10분 for typical dataset
   - 더 많은 샘플이 필요하면 30, 50 등으로 조정 가능
 
 - **sop_detail_level** (default: "standard"): SOP detail level (Stage 3)
@@ -99,46 +87,73 @@ Note: Stage 4 (Flowchart Generation)은 기본적으로 활성화되어 있으�
 
 ### 1. Initialize Pipeline
 
-Set up directory structure and validate inputs.
+Validate environment and prepare for execution.
 
 **Actions:**
-- Verify input file exists and has correct format
-- Create output directory structure: `{output_base_dir}/{01_clustering,02_extraction,03_sop}/`
 - Validate Python clustering package is installed
+- Check .env file with UPSTAGE_API_KEY
 - Print pipeline configuration
-- Prompt user to confirm (if `auto_proceed=false`)
+- Inform user that Stage 1 will be interactive
 
 **Expected Output:**
 ```
 ✅ Pipeline initialized
-  - Output directories created
   - Python package validated
-  - Configuration confirmed
+  - API key confirmed
+  - Ready for Stage 1 (대화형 파일 선택)
 
-Ready to start Stage 1 (Clustering)...
+📋 Stage 1 will prompt you to:
+  1. Select Excel data file (from data/ directory scan)
+  2. Choose company name (auto-extracted from filename)
+  3. Confirm output directory (auto-suggested)
+  4. (Optional) Adjust clustering parameters
+
+Proceeding to Stage 1...
 ```
 
 ### 2. Execute Stage 1: Clustering
 
-Run Python clustering pipeline to analyze and cluster customer data.
+Run clustering via `/stage1-clustering` skill with **interactive parameter selection**.
 
 **Documentation**: See [stage1-clustering.sop.md](stage1-clustering.sop.md)
 
 **Execution:**
 ```bash
-clustering-userchat \
-  --input "$input_file" \
-  --output "$output_base_dir/01_clustering" \
-  --prefix "$company" \
-  --sample "$sample_size" \
-  --tagging-mode "$tagging_mode" \
-  --k "$k"
+# Execute Stage 1 skill (대화형)
+/stage1-clustering
+
+# Stage 1 will:
+# 1. Scan data/ directory for Excel files
+# 2. Present file options via AskUserQuestion
+# 3. Extract company name from selected file
+# 4. Suggest output directory (e.g., results/{company})
+# 5. Run clustering with selected parameters
+# 6. Generate analysis report
 ```
 
-**Outputs:**
-- `{company}_clustered.xlsx` - Full dataset with cluster assignments
-- `{company}_tags.xlsx` - Cluster summary
-- `analysis_report.md` - Comprehensive analysis for Stage 2
+**User Interaction (대화형):**
+- 📁 File selection: Choose from scanned Excel files
+- 🏢 Company name: Confirm auto-extracted name
+- 📂 Output directory: Confirm suggested path
+- ⚙️ (Optional) Clustering parameters: sample_size, k, tagging_mode
+
+**Outputs (Auto-detected for next stages):**
+- `results/{company}/{company}_clustered.xlsx` - Full dataset with cluster assignments
+- `results/{company}/{company}_tags.xlsx` - Cluster summary
+- `results/{company}/analysis_report.md` - Comprehensive analysis for Stage 2
+
+**After Stage 1 Completion:**
+Pipeline automatically detects `company` and `output_base_dir` from Stage 1 outputs:
+```bash
+# Auto-detection logic
+output_base_dir="results/{company}"  # From Stage 1 output path
+company="{company}"                   # From Stage 1 output prefix
+
+# Validate Stage 1 outputs exist
+✓ {output_base_dir}/{company}_clustered.xlsx
+✓ {output_base_dir}/{company}_tags.xlsx
+✓ {output_base_dir}/analysis_report.md
+```
 
 **Quality Checks:**
 - [ ] Clustering completed successfully
@@ -148,11 +163,18 @@ clustering-userchat \
 - [ ] Category labels are meaningful
 - [ ] No critical data quality issues
 
-**Pause for Review (if auto_proceed=false):**
-```bash
-echo "Review analysis report: $output_base_dir/01_clustering/analysis_report.md"
-read -p "Proceed to Stage 2? (y/n) "
-```
+**Stage Transition:**
+
+**IF auto_proceed=true (기본값):**
+- You MUST automatically proceed to Stage 2 WITHOUT asking user
+- You MUST display: "✅ Stage 1 complete. Auto-proceeding to Stage 2..."
+- You MUST NOT use read -p or AskUserQuestion
+- You MUST skip to Step 3 immediately
+
+**IF auto_proceed=false:**
+- You MUST display: "📋 Review analysis report: $output_base_dir/analysis_report.md"
+- You MUST ask via AskUserQuestion: "Stage 1 완료. Stage 2 (Pattern Extraction)로 진행할까요?"
+- You MUST wait for user confirmation before proceeding
 
 ### 3. Execute Stage 2: Pattern Extraction
 
@@ -165,10 +187,10 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 # In Claude Code, execute:
 /stage2-extraction
 
-# With parameters:
-# - clustering_output_dir: $output_base_dir/01_clustering
-# - company: $company
-# - n_samples_per_cluster: $n_samples_per_cluster
+# With parameters (auto-detected from Stage 1):
+# - clustering_output_dir: $output_base_dir  # From Stage 1
+# - company: $company                         # From Stage 1
+# - n_samples_per_cluster: 20 (default, or user-specified)
 ```
 
 **Inputs:**
@@ -182,9 +204,9 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 - `extraction_summary.md` - Summary and recommendations
 
 **Expected Duration:**
-- 10 samples/cluster: ~10-15 minutes
-- 20 samples/cluster (기본값): ~15-25 minutes
-- 30 samples/cluster: ~25-35 minutes
+- 10 samples/cluster: ~3-5 minutes
+- 20 samples/cluster (기본값): ~5-10 minutes
+- 30 samples/cluster: ~10-15 minutes
 
 **Quality Checks:**
 - [ ] All JSON files generated and valid
@@ -194,11 +216,18 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 - [ ] Keyword taxonomy is comprehensive
 - [ ] Extraction summary highlights automation opportunities
 
-**Pause for Review (if auto_proceed=false):**
-```bash
-echo "Review extraction summary: $output_base_dir/02_extraction/extraction_summary.md"
-read -p "Proceed to Stage 3? (y/n) "
-```
+**Stage Transition:**
+
+**IF auto_proceed=true (기본값):**
+- You MUST automatically proceed to Stage 3 WITHOUT asking user
+- You MUST display: "✅ Stage 2 complete. Auto-proceeding to Stage 3..."
+- You MUST NOT use read -p or AskUserQuestion
+- You MUST skip to Step 4 immediately
+
+**IF auto_proceed=false:**
+- You MUST display: "📋 Review extraction summary: $output_base_dir/02_extraction/extraction_summary.md"
+- You MUST ask via AskUserQuestion: "Stage 2 완료. Stage 3 (SOP Generation)로 진행할까요?"
+- You MUST wait for user confirmation before proceeding
 
 ### 4. Execute Stage 3: SOP Generation
 
@@ -226,9 +255,9 @@ Use LLM to generate final Agent SOP document from extracted patterns.
 - `metadata.json` - SOP metadata
 
 **Expected Duration:**
-- Concise: ~4 minutes (병렬 에이전트)
-- Standard: ~6 minutes (병렬 에이전트)
-- Comprehensive: ~10 minutes
+- Concise: ~3-4 minutes
+- Standard: ~5 minutes
+- Comprehensive: ~5-7 minutes
 
 **Quality Checks:**
 - [ ] Multiple SOP files generated (TS_*.sop.md, HT_*.sop.md)
@@ -240,11 +269,18 @@ Use LLM to generate final Agent SOP document from extracted patterns.
 - [ ] Korean text is natural and professional
 - [ ] `metadata.json` is complete and accurate
 
-**Pause for Review (if auto_proceed=false):**
-```bash
-echo "Review generated SOPs: $output_base_dir/03_sop/"
-read -p "Continue to Stage 4 (Flowcharts)? (y/n) "
-```
+**Stage Transition:**
+
+**IF auto_proceed=true (기본값):**
+- You MUST automatically proceed to Stage 4 WITHOUT asking user
+- You MUST display: "✅ Stage 3 complete. Auto-proceeding to Stage 4..."
+- You MUST NOT use read -p or AskUserQuestion
+- You MUST skip to Step 5 immediately
+
+**IF auto_proceed=false:**
+- You MUST display: "📋 Review generated SOPs: $output_base_dir/03_sop/"
+- You MUST ask via AskUserQuestion: "Stage 3 완료. Stage 4 (Flowchart Generation)로 진행할까요?"
+- You MUST wait for user confirmation before proceeding
 
 ### 5. Execute Stage 4: Flowchart Generation (Required)
 
@@ -272,8 +308,8 @@ Generate Mermaid flowcharts from SOP documents for visual process documentation.
 - `flowchart_generation_summary.md` - Summary report
 
 **Expected Duration:**
-- All SOPs markdown: ~5 minutes
-- With SVG conversion: ~8 minutes (if CLI installed)
+- All SOPs markdown: ~3-4 minutes
+- With SVG conversion: ~4-5 minutes (if Mermaid CLI installed)
 
 **Quality Checks:**
 - [ ] Flowchart markdown files generated for all target SOPs
@@ -439,103 +475,108 @@ Present pipeline results to stakeholders.
 
 **Scenario**: Complete pipeline with flowcharts (default configuration)
 
-**Parameters:**
+**Execution:**
 ```bash
-input_file="data/user_chat_{company}.xlsx"
-company="Channel Corp."
-output_base_dir="results/channelcorp"
-sample_size="all"  # Full dataset
-tagging_mode="agent"
-k="auto"
-n_samples_per_cluster=20
-sop_detail_level="standard"
-generate_flowcharts=true  # Default: enabled
-flowchart_target="all"  # Default: all SOPs
-flowchart_format="markdown"  # Default: markdown only (no SVG)
-auto_proceed=false  # Pause for review after each stage
+/userchat-to-sop-pipeline
+```
+
+**Stage 1 (대화형 파라미터 수집):**
+- 📁 File selection: `data/user_chat_channelcorp.xlsx` (선택)
+- 🏢 Company: "channelcorp" (자동 추출)
+- 📂 Output: `results/channelcorp` (자동 제안)
+- ⚙️ Clustering: sample_size=all, k=auto, tagging_mode=agent (기본값)
+
+**Optional Parameters (Stage 2-4):**
+```bash
+n_samples_per_cluster=20       # Stage 2 (default)
+sop_detail_level="standard"     # Stage 3 (default)
+generate_flowcharts=true        # Stage 4 (default)
+flowchart_target="all"          # Stage 4 (default)
+auto_proceed=false              # Pause for review
 ```
 
 **Timeline:**
-- Stage 1 (Clustering): 6 minutes
+- Stage 1 (Clustering): 3 minutes (대화형 포함)
+- Review & Approve: 2 minutes
+- Stage 2 (Extraction): 7 minutes
 - Review & Approve: 3 minutes
-- Stage 2 (Extraction): 20 minutes
-- Review & Approve: 5 minutes
-- Stage 3 (SOP Generation): 15 minutes (병렬 생성)
-- Review & Approve: 3 minutes
-- Stage 4 (Flowcharts - Markdown): 8 minutes
-- Validation & Summary: 2 minutes
-- **Total**: 62 minutes
+- Stage 3 (SOP Generation): 5 minutes
+- Review & Approve: 2 minutes
+- Stage 4 (Flowcharts): 4 minutes
+- Validation & Summary: 1 minute
+- **Total**: 27 minutes
 
 **Results:**
 - 10 clusters, 37 patterns, 52 FAQ pairs
 - 7 SOP files (TS: 4, HT: 3), ~5,000 total lines
-- 7 flowchart markdowns (no SVG)
+- 7 flowchart markdowns
 - Key insight: A/S inquiries dominate (48%)
 
 ### Example 2: Quick Production Run (Auto-proceed Mode)
 
 **Scenario**: Fast pipeline execution without manual review pauses
 
-**Parameters:**
+**Execution:**
 ```bash
-input_file="data/raw/user_chat_{company}.xlsx"
-company="Channel Corp."
-output_base_dir="results/channelcorp"
-sample_size="all"
-tagging_mode="agent"
-k="auto"
-n_samples_per_cluster=20
-sop_detail_level="standard"
-generate_flowcharts=true  # Default: enabled
-flowchart_target="all"  # Default: all SOPs
-flowchart_format="markdown"  # Default: markdown only
-auto_proceed=true  # No pauses
+/userchat-to-sop-pipeline
+```
+
+**Stage 1 (대화형):**
+- 파일, 회사명, 출력 경로 선택 (대화형)
+- Clustering 파라미터는 기본값 사용
+
+**Optional Parameters:**
+```bash
+auto_proceed=true  # No pauses (자동 진행)
 ```
 
 **Timeline:**
-- Stage 1: 5 minutes
-- Stage 2: 8 minutes (병렬 에이전트)
-- Stage 3: 6 minutes (병렬 에이전트)
-- Stage 4: 5 minutes
+- Stage 1: 3 minutes (대화형 포함)
+- Stage 2: 7 minutes (auto-proceed)
+- Stage 3: 5 minutes (auto-proceed)
+- Stage 4: 4 minutes (auto-proceed)
 - Validation: 1 minute
-- **Total**: 25 minutes
+- **Total**: 20 minutes
 
 **Results:**
 - 10 clusters, 37 patterns, 52 FAQ pairs
 - 7 SOP files (TS: 4, HT: 3)
-- 7 flowchart markdowns (Mermaid)
+- 7 flowchart markdowns
 
 ### Example 3: Quick Test Run
 
 **Scenario**: Quick validation before full run
 
-**Parameters:**
+**Execution:**
 ```bash
-input_file="data/raw/user_chat_test.xlsx"
-company="TestCo"
-output_base_dir="results/test"
-sample_size=1000
-tagging_mode="agent"
-k=15
-n_samples_per_cluster=10
-sop_detail_level="concise"
-generate_flowcharts=true  # Default: enabled
-flowchart_target="ts_only"  # Only TS for quick test
-flowchart_format="markdown"  # Default: markdown only
-auto_proceed=true  # Automatic, no pauses
+/userchat-to-sop-pipeline
+```
+
+**Stage 1 (대화형):**
+- 📁 File: `data/user_chat_test.xlsx` (선택)
+- 🏢 Company: "testco" (자동)
+- 📂 Output: `results/testco` (자동)
+- ⚙️ **Clustering 조정**: sample_size=1000, k=15 (대화형에서 조정)
+
+**Optional Parameters:**
+```bash
+n_samples_per_cluster=10        # Stage 2 (빠른 분석)
+sop_detail_level="concise"      # Stage 3 (간소화)
+flowchart_target="ts_only"      # Stage 4 (TS만)
+auto_proceed=true               # 자동 진행
 ```
 
 **Timeline:**
-- Stage 1: 3 minutes (K 고정)
-- Stage 2: 5 minutes (병렬 에이전트, quick)
-- Stage 3: 4 minutes (병렬 에이전트, concise)
-- Stage 4: 3 minutes (TS only)
-- **Total**: 15 minutes
+- Stage 1: 2 minutes (1000개, K=15)
+- Stage 2: 4 minutes (10 samples/cluster)
+- Stage 3: 3 minutes (concise)
+- Stage 4: 2 minutes (TS only)
+- **Total**: 11 minutes
 
 **Results:**
 - 15 clusters, 25 patterns
 - 5 SOP files, ~2,500 total lines
-- 3 TS flowcharts (Markdown)
+- 3 TS flowcharts
 
 ## Troubleshooting
 
@@ -607,7 +648,7 @@ Each stage is independent and can be resumed:
 **Python (Stage 1):**
 - Embedding generation: Computational, benefits from caching
 - K-Means clustering: Statistical algorithm, fast and reliable
-- Results in 3-5 minutes (vs 30+ min if done by LLM)
+- Results in 2-3 minutes (vs 30+ min if done by LLM)
 
 **LLM (Stage 2, 3):**
 - Pattern extraction: Requires language understanding
@@ -616,11 +657,27 @@ Each stage is independent and can be resumed:
 
 **Hybrid = Best of Both Worlds**
 
+### Stage 2 Execution Strategy
+
+**Important Implementation Details:**
+
+⚠️ **Stage 2는 메인 에이전트에서 순차 처리됩니다**
+- 서브에이전트(Task agent) 사용 금지 - 성능 저하 및 hanging 문제 발생
+- 각 클러스터를 순차적으로 분석하는 것이 더 빠르고 안정적
+- 병렬 처리 시도 시 오히려 실행 시간 증가 및 불안정성 증가
+
+✅ **Enrichment는 항상 생성됩니다**
+- `patterns_enriched.json` 파일이 Stage 2 Step 7에서 자동 생성
+- 10개 대표 대화 샘플 + 20개 tone-and-manner 샘플 포함
+- Stage 3에서 이 파일을 사용하여 더 풍부한 SOP 생성
+
+**자세한 실행 전략은 `/stage2-extraction` 스킬 참조**
+
 ### Pipeline Customization
 
 Choose configuration based on use case:
 
-**Quick Prototype** (~15 min, Stage 1-4):
+**Quick Prototype** (~11 min, Stage 1-4):
 - sample_size: 1000
 - n_samples_per_cluster: 10
 - sop_detail_level: "concise"
@@ -628,7 +685,7 @@ Choose configuration based on use case:
 - flowchart_target: "ts_only"
 - flowchart_format: "markdown"
 
-**Standard Production** (~20 min, Stage 1-4, 기본값):
+**Standard Production** (~16-20 min, Stage 1-4, 기본값):
 - sample_size: "all"
 - n_samples_per_cluster: 20 (기본값)
 - sop_detail_level: "standard"
@@ -636,7 +693,7 @@ Choose configuration based on use case:
 - flowchart_target: "all"
 - flowchart_format: "markdown"
 
-**Thorough Analysis** (~25 min, Stage 1-4):
+**Thorough Analysis** (~22-26 min, Stage 1-4):
 - sample_size: "all"
 - n_samples_per_cluster: 30 (더 많은 샘플)
 - sop_detail_level: "comprehensive"
@@ -644,7 +701,7 @@ Choose configuration based on use case:
 - flowchart_target: "all"
 - flowchart_format: "markdown"
 
-**Legacy Mode** (~15 min, Stage 1-3 only):
+**Legacy Mode** (~12-15 min, Stage 1-3 only):
 - sample_size: "all"
 - n_samples_per_cluster: 20
 - sop_detail_level: "standard"
