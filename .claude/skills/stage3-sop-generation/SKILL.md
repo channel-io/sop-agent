@@ -296,6 +296,12 @@ Create detailed steps using extracted patterns and response strategies.
 - You SHOULD reference FAQ answers in response steps
 - You MAY include code snippets or pseudo-code for complex logic
 - You MUST ensure steps flow logically (classify → analyze → respond → escalate)
+- **For Troubleshooting (TS) workflows**: You MUST follow the **비파괴적 순서 (Non-Destructive Order)** principle
+  - Order troubleshooting steps from least to most invasive (최소 침습 → 최대 침습)
+  - Minimize data loss risk and action scope at each step
+  - Include "✅ 해결되었는지 확인" checkpoint after each troubleshooting step
+  - Example order: Connection check → Refresh → Update → Restart app → Restart device → Reinstall
+  - Reference: See `templates/TS_template.md` for detailed guidance
 
 **Step Structure Template:**
 ```markdown
@@ -379,13 +385,14 @@ Process A/S (after-sales service) inquiries using troubleshooting patterns.
    - 고장, 작동안함 → General defect workflow
    - 교체, 새제품 → Replacement workflow
 
-2. **IF charging issue:**
+2. **IF charging issue (비파괴적 순서):**
    a. Provide troubleshooting steps (from FAQ faq_2_1):
-      - Check cable and adapter connection
-      - Clean charging port
-      - Test with different cable
-   b. Ask customer to test and report results
-   c. IF still failing after 3 attempts → Escalate to AS center
+      - Step 1: Check cable and adapter connection → ✅ Ask customer to test and report
+      - Step 2: Clean charging port → ✅ Ask customer to test and report
+      - Step 3: Test with different cable → ✅ Ask customer to test and report
+   b. After each step, ask customer to confirm if issue is resolved
+   c. IF still failing after all steps → Escalate to AS center
+   d. **Important**: Follow non-destructive order (최소 침습 → 최대 침습)
 
 3. **IF general defect:**
    a. Ask for symptom details (noise, no power, etc.)
@@ -693,6 +700,7 @@ Create metadata file with SOP information.
   "company": "Channel Corp.",
   "version": "1.0.0",
   "generated_at": "2024-01-28T19:00:00Z",
+  "last_updated_at": "2024-01-28T19:00:00Z",
   "generated_by": "Claude Sonnet 4.5 (Stage 3 Pipeline)",
   "source_files": [
     "results/{company}/01_clustering/{company}_clustered.xlsx",
@@ -857,6 +865,7 @@ SOP metadata and statistics.
 ## Related Documentation
 
 - **Agent SOP Format**: `rules/agent-sop-format.md`
+- **HT/TS Templates**: `templates/HT_template.md`, `templates/TS_template.md` (SOP structure reference)
 - **Stage 2**: `agent-sops/stage2-extraction.sop.md` (Prerequisite)
 - **RFC 2119**: https://datatracker.ietf.org/doc/html/rfc2119
 
