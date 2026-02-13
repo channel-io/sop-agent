@@ -40,6 +40,11 @@ This SOP guides the generation of a production-ready Agent SOP document from ext
   - Should be descriptive and specific
 
 ### Optional
+- **mode** (default: "standard"): SOP generation depth mode
+  - `"quick"`: Concise SOP (~500 lines), all standard sections
+  - `"standard"`: Balanced SOP (~1000 lines), all standard sections (default)
+  - `"deep"`: Comprehensive SOP (~2000 lines), full detail with extensive examples
+
 - **sop_type** (default: "customer_support"): Type of SOP to generate
   - `"customer_support"`: General support agent SOP
   - `"troubleshooting"`: Technical troubleshooting focus
@@ -49,11 +54,6 @@ This SOP guides the generation of a production-ready Agent SOP document from ext
   - `"all"`: Full SOP (Overview, Parameters, Steps, Examples, Troubleshooting)
   - `"essential"`: Core sections only (Overview, Parameters, Steps)
   - Custom list: e.g., `"overview,parameters,steps,examples"`
-
-- **detail_level** (default: "standard"): Level of detail
-  - `"concise"`: Minimal SOP (~500 lines)
-  - `"standard"`: Balanced detail (~1000 lines)
-  - `"comprehensive"`: Full detail with all examples (~2000 lines)
 
 ## Steps
 
@@ -77,9 +77,11 @@ Read all Stage 2 outputs to understand extracted patterns and strategies.
   6b. `{company}_clustered.xlsx`: Full dataset with cluster assignments (from Stage 1 output)
   - Read 10 sample conversations per cluster for realistic examples
 - You MUST verify JSON structure is valid
+- You MUST generate SOP for EVERY cluster in patterns.json (do NOT select only "representative" clusters)
+- You MUST create one SOP file per cluster (total = number of clusters)
 - You SHOULD identify which patterns will become SOP steps
 - You SHOULD group related patterns for workflow design
-- You MAY skip low-frequency patterns (< 2% of cluster)
+- You MAY skip low-frequency patterns within a cluster (< 2% of cluster), but NOT the cluster itself
 
 **Reading Process:**
 ```bash
@@ -171,13 +173,18 @@ Plan the Agent SOP structure based on extracted patterns.
 
 Create a clear, concise overview of the SOP's purpose and capabilities.
 
+**Mode-Specific Behavior:**
+- **Quick Mode**: Brief overview (50-100 words), essential info only
+- **Standard Mode**: Standard overview (100-200 words) with key features
+- **Deep Mode**: Comprehensive overview (200-300 words) with detailed context and benefits
+
 **Constraints:**
 - You MUST describe what the SOP accomplishes
 - You MUST specify when to use this SOP
+- You MUST adjust length and detail based on mode
 - You SHOULD list key features or capabilities (3-5 bullets)
 - You SHOULD mention the company and industry context
 - You MAY include expected outcomes or benefits
-- You MUST keep overview to 100-200 words
 
 **Overview Template:**
 ```markdown
@@ -543,12 +550,17 @@ Escalate to specialized teams when required.
 
 Write concrete usage examples demonstrating the SOP in action.
 
+**Mode-Specific Behavior:**
+- **Quick Mode**: 1-2 basic examples only
+- **Standard Mode**: 2-3 examples covering main scenarios (default)
+- **Deep Mode**: 4-5 examples including edge cases and anti-examples
+
 **Constraints:**
-- You MUST include at least 2 examples
+- You MUST adjust example count based on mode
 - You MUST use realistic customer messages (from clustered.xlsx samples)
 - You SHOULD cover different inquiry types
 - You SHOULD show both simple and complex scenarios
-- You MAY include "anti-examples" (what NOT to do)
+- You MAY include "anti-examples" (what NOT to do) in Deep Mode
 - You MUST format examples clearly with Input → Process → Output structure
 
 **Example Structure:**
@@ -617,8 +629,14 @@ Channel Corp. 고객센터
 
 Document common issues and failure modes.
 
+**Mode-Specific Behavior:**
+- **Quick Mode**: SKIP troubleshooting section or include 1-2 critical issues only
+- **Standard Mode**: Include 3-4 common issues with solutions (default)
+- **Deep Mode**: Comprehensive troubleshooting with 5+ issues, prevention tips, and external references
+
 **Constraints:**
-- You MUST include troubleshooting section if SOP has >3 potential failure points
+- You MUST adjust based on mode (see above)
+- You MUST include troubleshooting section in Standard/Deep modes if SOP has >3 potential failure points
 - You SHOULD document issues encountered during testing or known edge cases
 - You SHOULD provide clear solutions or workarounds
 - You MAY reference external documentation
@@ -752,7 +770,7 @@ Write results/{company}/03_sop/metadata.json
 - sop_type: "customer_support"
 - detail_level: "standard"
 
-**Execution Time**: ~25 minutes
+**Execution Time**: ~5 minutes
 
 **Output:**
 - `{company}_support.sop.md` (1,200 lines)
@@ -773,7 +791,7 @@ Write results/{company}/03_sop/metadata.json
 - sop_type: "troubleshooting"
 - detail_level: "concise"
 
-**Execution Time**: ~15 minutes
+**Execution Time**: ~3-4 minutes
 
 **Output:**
 - `{company}_troubleshooting.sop.md` (600 lines)
@@ -901,6 +919,38 @@ The generated SOP should be reusable across:
 - Provide clear decision logic (IF/THEN)
 - Include examples for common scenarios
 - Document edge cases in Troubleshooting
+
+### Execution Strategy
+
+**메인 에이전트에서 순차 처리 (권장)**
+
+재료(patterns, FAQ)가 이미 준비되어 있으므로, subagent 병렬 처리와 순차 처리의 시간 차이가 거의 없습니다. 순차 처리가 더 안정적이고 디버깅이 쉽습니다.
+
+**Critical Constraints:**
+- You MUST generate SOP documents using **LLM (Claude)** directly
+- You MUST NOT use Python scripts to auto-generate SOP files
+- You MUST NOT use automated template generators or boilerplate tools
+- You MUST write each SOP through natural language composition
+- You SHOULD process each SOP sequentially in main agent
+- You MAY use subagent if needed, but sequential processing is preferred
+
+**Why No Python Auto-generation:**
+- ❌ Python cannot understand nuanced customer expressions
+- ❌ Template-based generation produces generic, low-quality SOPs
+- ✅ LLM composition ensures context-aware, company-specific content
+- ✅ Natural language understanding captures tone and intent
+
+**Recommended Approach:**
+1. **순차 SOP 생성** - 메인 에이전트에서 하나씩 생성
+2. **LLM 직접 작성** - Python 스크립트 없이 Claude가 직접 작성
+3. **재료 활용** - patterns_enriched.json, faq.json에서 내용 추출
+4. 각 SOP 완료 후 파일 저장 → 다음 SOP 진행
+
+**Efficiency Tips:**
+1. ✅ patterns_enriched.json 사용 (clustered.xlsx 재로드 불필요)
+2. ✅ 순차 처리로 안정성 확보
+3. ❌ Python 자동 생성 스크립트 사용 금지
+4. 시간 차이 거의 없음 (재료가 준비되어 있으므로)
 
 ### Quality Checklist
 
