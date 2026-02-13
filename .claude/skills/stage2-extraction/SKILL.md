@@ -46,16 +46,15 @@ This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and 
   - Used to understand industry and customer domain
 
 ### Optional
+- **mode** (default: "standard"): Analysis depth mode
+  - `"quick"`: Fast extraction, n_samples=20, skips extraction_summary.md generation
+  - `"standard"`: Balanced analysis, n_samples=20, full reports (default)
+  - `"deep"`: Thorough analysis, n_samples=30-50, comprehensive reports
+
 - **focus_clusters** (default: "top_10"): Which clusters to prioritize
   - `"top_10"`: Extract from top 10 largest clusters
   - `"all"`: Extract from all clusters
   - List of IDs: e.g., `"0,2,5,7"` for specific clusters
-
-- **n_samples_per_cluster** (default: 20): Number of samples to analyze per cluster
-  - Example: `10`, `20`, `30`, `50`
-  - Recommended: 20 (충분한 패턴 파악 + 합리적인 실행 시간)
-  - 더 많은 샘플이 필요하면 이 값을 조정하세요
-  - Enrichment (patterns_enriched.json) is always generated
 
 - **output_format** (default: "json"): Output file format
   - `"json"`: Structured JSON (recommended for Stage 3)
@@ -115,8 +114,15 @@ Key Insight: A/S inquiries dominate, need detailed response templates
 
 For each cluster, identify common patterns, inquiry types, and response needs by analyzing **actual customer messages**.
 
+**Mode-Specific Behavior:**
+- **Quick Mode**: Analyze 20 samples per cluster (same as standard)
+- **Standard Mode**: Analyze 20 samples per cluster (default)
+- **Deep Mode**: Analyze 30-50 samples per cluster for more comprehensive patterns
+
 **Constraints:**
-- You MUST analyze n_samples_per_cluster messages per cluster (기본값: 20)
+- You MUST adjust sample count based on mode:
+  - Quick/Standard: 20 samples per cluster
+  - Deep: 30-50 samples per cluster
 - You MUST identify 3-8 distinct patterns within each cluster
 - You MUST extract actual customer phrases from samples (DO NOT paraphrase or guess!)
 - You MUST NOT infer or assume patterns based on cluster labels alone
@@ -519,15 +525,22 @@ Create a structured keyword taxonomy for search and categorization.
 
 Save all extracted data in structured JSON and/or Markdown format.
 
+**Mode-Specific Behavior:**
+- **Quick Mode**: Save core JSON files only (patterns, faq, response_strategies, keywords). SKIP extraction_summary.md generation.
+- **Standard Mode**: Save all JSON files + extraction_summary.md (default)
+- **Deep Mode**: Save all files + enhanced extraction_summary.md with deeper insights
+
 **Constraints:**
 - You MUST create output directory if it doesn't exist
 - You MUST save at least one output format (JSON recommended)
+- You MUST adjust outputs based on mode (see above)
 - You SHOULD include metadata (timestamp, source files, cluster count)
 - You MAY split output into multiple files for readability
 - You MUST NOT overwrite existing files without confirmation
 
-**Output Files:**
+**Output Files (Mode-Dependent):**
 
+**All Modes Generate:**
 1. **`patterns.json`**: All extracted patterns with HT/TS classification
 ```json
 {
@@ -608,7 +621,8 @@ Save all extracted data in structured JSON and/or Markdown format.
 }
 ```
 
-5. **`extraction_summary.md`**: Human-readable summary
+**Standard & Deep Modes Only:**
+5. **`extraction_summary.md`**: Human-readable summary (SKIPPED in Quick Mode)
 ```markdown
 # Stage 2 Extraction Summary: Meliens
 
@@ -728,7 +742,7 @@ python3 scripts/enrich_patterns.py \
 2. Analyze clusters sequentially in main agent (순차 처리)
 3. Save results to JSON files after each analysis step
 
-**Actual Execution Time**: **~8-12 minutes**
+**Actual Execution Time**: **~5-10 minutes**
 
 **Output:**
 - 10 clusters analyzed (645건, 64.5% coverage)
@@ -751,7 +765,7 @@ python3 scripts/enrich_patterns.py \
 - focus_clusters: "all"
 - n_samples_per_cluster: 30 (더 많은 샘플)
 
-**Execution Time**: ~20-25 minutes
+**Execution Time**: ~10-15 minutes
 
 **Output:**
 - All 20 clusters analyzed with 30 samples each
@@ -840,12 +854,12 @@ Stage 2 is intentionally LLM-based because:
 
 | Samples/Cluster | Clusters | Time | Notes |
 |-----------------|----------|------|-------|
-| 10 | 10 | ~5-8 min | 빠른 분석, enrichment 포함 |
-| 20 (기본값) | 10 | ~8-15 min | 균형잡힌 분석, enrichment 포함 |
-| 30 | 10 | ~15-25 min | 심층 분석, enrichment 포함 |
+| 10 | 10 | ~3-5 min | 빠른 분석, enrichment 포함 |
+| 20 (기본값) | 10 | ~5-10 min | 균형잡힌 분석, enrichment 포함 |
+| 30 | 10 | ~10-15 min | 심층 분석, enrichment 포함 |
 
 **Actual Performance (Assacom Case):**
-- 10 clusters analyzed with real samples: **~8-12 minutes**
+- 10 clusters analyzed with real samples: **~5-10 minutes**
 - Sequential analysis in main agent: **안정적이고 빠름** (서브에이전트 사용 시 hanging 발생)
 - Sample collection (Python): < 1 second
 - Pattern extraction per cluster: ~1-2분

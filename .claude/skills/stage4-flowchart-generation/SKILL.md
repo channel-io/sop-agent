@@ -25,7 +25,7 @@ Convert: SVG image generation (mmdc CLI)
 Output: Flowchart Markdown + SVG files
 ```
 
-**Total Time**: 5-15 minutes (depends on number of SOPs)
+**Total Time**: ~4 minutes (typical, depends on number of SOPs)
 
 ## Parameters
 
@@ -35,6 +35,11 @@ Output: Flowchart Markdown + SVG files
   - Must contain `.sop.md` files
 
 ### Optional
+- **mode** (default: "standard"): Flowchart generation depth mode
+  - `"quick"`: Simple flowcharts (5-10 nodes), basic decision tree only
+  - `"standard"`: Balanced flowcharts (15-30 nodes), main process flows (default)
+  - `"deep"`: Detailed flowcharts (30+ nodes), full process with all edge cases
+
 - **target_sops** (default: "all"): Which SOPs to generate flowcharts for
   - `"all"`: Generate for all SOPs (both TS and HT)
   - `"ts_only"`: Only Troubleshooting SOPs (recommended for complex processes)
@@ -45,11 +50,6 @@ Output: Flowchart Markdown + SVG files
   - `"markdown"`: Mermaid markdown only
   - `"svg"`: SVG image only
   - `"both"`: Both markdown and SVG (recommended)
-
-- **diagram_style** (default: "standard"): Flowchart complexity
-  - `"simple"`: Basic decision tree (5-10 nodes)
-  - `"standard"`: Balanced detail (15-30 nodes)
-  - `"detailed"`: Full process with all cases (30+ nodes)
 
 - **color_scheme** (default: "status"): Color coding strategy
   - `"status"`: Success (green), Warning (yellow), Error (red), Info (blue)
@@ -115,13 +115,22 @@ For each target SOP, analyze structure to extract flowchart components.
 
 Convert analyzed structure into Mermaid flowchart syntax.
 
+**Mode-Specific Behavior:**
+- **Quick Mode**: Basic decision tree (5-10 nodes), main paths only
+- **Standard Mode**: Balanced flowchart (15-30 nodes), all standard cases
+- **Deep Mode**: Comprehensive flowchart (30+ nodes), all edge cases and escalation paths
+
 **Actions:**
 - Create flowchart nodes (Start, Decision, Process, End)
 - Define edges and conditions
 - Apply color coding (Success, Warning, Danger, Info)
 - Add legend and case descriptions
+- Adjust complexity based on mode
 
-**Expected Duration:** 2-3 minutes per SOP
+**Expected Duration:**
+- Quick: 1-2 minutes per SOP
+- Standard: 2-3 minutes per SOP
+- Deep: 3-5 minutes per SOP
 
 ### 4. Create Flowchart Markdown File
 
@@ -190,7 +199,7 @@ output_format: both
 - 1 Summary report
 - Updated metadata.json
 
-**Time:** ~12 minutes
+**Time:** ~4-5 minutes
 
 ### Example 2: TS Only Run
 
@@ -207,7 +216,7 @@ output_format: both
 - 1 Summary report
 - Updated metadata.json
 
-**Time:** ~8 minutes
+**Time:** ~3-4 minutes
 
 ### Example 3: Specific SOPs
 
@@ -221,7 +230,7 @@ target_sops: ["TS_001", "HT_001"]
 - 2 Flowcharts (1 TS, 1 HT)
 - 2 SVG images
 
-**Time:** ~4 minutes
+**Time:** ~2 minutes
 
 ### Example 4: Markdown Only (CLI 없음)
 
@@ -238,7 +247,7 @@ target_sops: all
 - ⚠️ SVG 생성 건너뜀
 - 1 Summary report
 
-**Time:** ~8 minutes (SVG 변환 시간 제외)
+**Time:** ~3-4 minutes (SVG 변환 시간 제외)
 
 **Note:** Markdown 파일은 VSCode Mermaid 확장 또는 GitHub에서 바로 렌더링됨
 

@@ -26,7 +26,10 @@ This sop executes automated clustering and tagging of customer support chat data
 - **k** (optional, default: "auto"): Number of clusters - use "auto" for optimal selection or integer for fixed count
 - **k_range** (optional, default: "8,10,12,15,20,25"): K values to test when k="auto"
 - **cache_dir** (optional, default: "cache"): Embedding cache directory
-- **mode** (optional, default: "auto"): Execution mode - "interactive" for user confirmation at each step, "auto" for autonomous execution
+- **mode** (optional, default: "standard"): Analysis depth mode
+  - "quick": Fast analysis, same sample size as standard but skips analysis_report.md generation
+  - "standard": Balanced analysis with full reports (default)
+  - "deep": Thorough analysis with increased sample size and extended k_range
 
 **Constraints for parameter acquisition:**
 - You MUST use AskUserQuestion tool to gather parameters with selectable options
@@ -44,19 +47,23 @@ This sop executes automated clustering and tagging of customer support chat data
 
 Apply these patterns throughout all steps based on the selected mode:
 
-**Interactive Mode:**
-- Present proposed actions and ask for confirmation before executing commands
-- Show command output and ask if user wants to proceed
-- Pause after clustering to review results before generating analysis report
-- Ask for feedback on analysis report quality
+**Quick Mode:**
+- Use same sample_size as standard (default: 1000)
+- Skip analysis_report.md generation (Step 4) for faster completion
+- Time saved: ~2-3 minutes
 
-**Auto Mode:**
-- Execute all commands autonomously without asking for confirmation
-- Do NOT ask "Shall I proceed?" or "Ready to continue?" before each step
-- Do NOT pause between steps unless errors occur
-- Display progress and command outputs for transparency
-- Continue through all steps automatically
-- Provide comprehensive summary at completion
+**Standard Mode (Default):**
+- Use default sample_size (1000) and k_range (8,10,12,15,20,25)
+- Execute all steps including full analysis_report.md
+- Balanced speed and thoroughness
+- Recommended for most use cases
+
+**Deep Mode:**
+- Use larger sample_size (recommend: "all" or 5000+)
+- Extended k_range (8,10,12,15,20,25,30,35) for better cluster optimization
+- Generate comprehensive analysis_report.md with additional insights
+- More thorough pattern identification
+- Time cost: +5-10 minutes
 
 ## Steps
 
@@ -69,15 +76,16 @@ Scan available files and gather parameters through interactive selection.
 - You MUST use AskUserQuestion tool to present file options
 - You MUST extract company name from selected filename (e.g., "user_chat_assacom.xlsx" → "assacom")
 - You MUST suggest output_dir based on company name (e.g., "results/assacom")
-- You MUST verify .env file exists with API key: `test -f .env && grep -q UPSTAGE_API_KEY .env`
+- You MUST verify .env file exists: `test -f .env`
 - You MUST create output_dir if missing: `mkdir -p {output_dir}`
-- You MUST check Python dependencies: `pip3 show pandas numpy scikit-learn openpyxl openai tqdm python-dotenv`
-- You MUST install missing dependencies if user confirms: `pip3 install -r requirements.txt --user`
 - You MUST NOT proceed if input validation fails
+- You MUST adjust parameters based on mode:
+  - **Quick**: sample_size=1000 (default), k_range=default
+  - **Standard**: sample_size=1000 (default), k_range=default
+  - **Deep**: sample_size="all" (or 5000+), k_range="8,10,12,15,20,25,30,35"
+- Note: Python dependencies are validated automatically when script runs
 - You SHOULD display file size for selected file
 - You MAY provide custom path option in addition to scanned files
-
-> 💬 See [Mode Behavior](#mode-behavior) for mode-specific interaction guidance
 
 **Parameter Selection Example:**
 ```
@@ -222,6 +230,11 @@ Validate output files with tags and check data quality.
 ### 4. Generate Analysis Report
 
 Create comprehensive analysis report for Stage 2 guidance.
+
+**Mode-Specific Behavior:**
+- **Quick Mode**: SKIP this step entirely. Proceed directly to Step 5 with brief summary only.
+- **Standard Mode**: Generate standard analysis_report.md as described below.
+- **Deep Mode**: Generate enhanced analysis_report.md with additional insights and larger sample extractions.
 
 **Constraints:**
 - You MUST read both output Excel files to gather statistics
@@ -374,7 +387,7 @@ Agent autonomously:
 - 20 clusters identified
 - Silhouette: 0.064
 - Top issue: AS문의 (33.8%)
-- Time: ~6 minutes total
+- Time: ~2-3 minutes total
 
 ### Example 2: Production Run (Full dataset, interactive)
 
@@ -471,9 +484,9 @@ The analysis report (`analysis_report.md`) is critical for Stage 2:
 
 ### Performance Expectations
 
-- 1,000 records: ~5-6 minutes (1 min embedding, 3 min clustering, 2 min report)
-- 10,000 records: ~15-20 minutes
-- Embedding cache makes re-runs much faster (< 2 min)
+- 1,000 records: ~2-3 minutes (< 1 min embedding, 1 min clustering, 1 min report)
+- 10,000 records: ~10-15 minutes
+- Embedding cache makes re-runs much faster (< 1 min)
 
 ### Cost Estimates
 
