@@ -41,7 +41,7 @@ This SOP guides the generation of a production-ready Agent SOP document from ext
 
 ### Optional
 - **mode** (default: "standard"): SOP generation depth mode
-  - `"quick"`: Concise SOP (~500 lines), all standard sections (default)
+  - `"quick"`: Concise SOP (~500 lines), all standard sections
   - `"standard"`: Balanced SOP (~1000 lines), all standard sections (default)
   - `"deep"`: Comprehensive SOP (~2000 lines), full detail with extensive examples
 

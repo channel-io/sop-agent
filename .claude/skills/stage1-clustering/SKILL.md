@@ -59,7 +59,7 @@ Apply these patterns throughout all steps based on the selected mode:
 - Recommended for most use cases
 
 **Deep Mode:**
-- Use larger sample_size (recommend: "all" or 5000+)
+- Use larger sample_size (recommend: 3000+)
 - Extended k_range (8,10,12,15,20,25,30,35) for better cluster optimization
 - Generate comprehensive analysis_report.md with additional insights
 - More thorough pattern identification
