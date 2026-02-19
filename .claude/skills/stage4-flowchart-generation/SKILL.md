@@ -115,17 +115,27 @@ For each target SOP, analyze structure to extract flowchart components.
 
 Convert analyzed structure into Mermaid flowchart syntax.
 
-**Mode-Specific Behavior:**
-- **Quick Mode**: Basic decision tree (5-10 nodes), main paths only
-- **Standard Mode**: Balanced flowchart (15-30 nodes), all standard cases
-- **Deep Mode**: Comprehensive flowchart (30+ nodes), all edge cases and escalation paths
+**You MUST read `templates/FLOWCHART_template.md` before generating any flowchart.**
+This template defines the official color scheme (`classDef`), node shapes, naming conventions, and quality checklist.
 
-**Actions:**
-- Create flowchart nodes (Start, Decision, Process, End)
-- Define edges and conditions
-- Apply color coding (Success, Warning, Danger, Info)
-- Add legend and case descriptions
-- Adjust complexity based on mode
+**Key rules from the template:**
+- Use `classDef` for color coding (NOT inline `style` per node):
+  ```
+  classDef successClass fill:#d4edda,stroke:#28a745,stroke-width:2px
+  classDef warningClass fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+  classDef dangerClass  fill:#f8d7da,stroke:#dc3545,stroke-width:2px
+  classDef infoClass    fill:#d1ecf1,stroke:#17a2b8,stroke-width:2px
+  classDef processClass fill:#e7f3ff,stroke:#0056b3,stroke-width:2px
+  ```
+- Apply classes with `class NodeA,NodeB successClass` at the end of the diagram
+- Node shapes: `([...])` start/end, `{...}` decision, `[...]` process
+- No double-quotes inside node labels — use `<br/>` for line breaks
+- Keep node text ≤ 15 characters per line
+
+**Mode-Specific Behavior:**
+- **Quick Mode**: Simple (5-10 nodes), main paths only
+- **Standard Mode**: Balanced (15-30 nodes), all standard cases (default)
+- **Deep Mode**: Comprehensive (30+ nodes), all edge cases and escalation paths
 
 **Expected Duration:**
 - Quick: 1-2 minutes per SOP
@@ -134,14 +144,72 @@ Convert analyzed structure into Mermaid flowchart syntax.
 
 ### 4. Create Flowchart Markdown File
 
-Write complete flowchart documentation.
+Write complete flowchart documentation following **`templates/FLOWCHART_template.md`** structure exactly.
 
-**Actions:**
-- Create file: `{SOP_ID}_FLOWCHART.md`
-- Include Mermaid chart, case explanations, checkpoints
-- Add cross-reference to original SOP
+**You MUST use this section order:**
 
-**Expected Duration:** 1 minute per SOP
+```
+# [{SOP 파일명}] Flowchart
+
+## 상담 흐름도
+
+```mermaid
+flowchart TD
+    ...
+    classDef successClass ...
+    classDef warningClass ...
+    classDef dangerClass  ...
+    classDef infoClass    ...
+    classDef processClass ...
+    class ... successClass
+    class ... warningClass
+    ...
+```
+
+## 케이스별 설명
+
+### 🟢 정상 처리 (초록색)
+- **케이스 N**: {설명} — **자동화 가능**: {X}% ({해결 기술: RAG/Action/Rules})
+
+### 🟡 주의 필요 / 조건부 처리 (노란색)
+- {설명}
+
+### 🔴 담당팀 전달 / 에스컬레이션 (빨간색)
+- {설명}
+
+### 🔵 의사결정 포인트 (파란색)
+- {설명}
+
+### ⚙️ 정보 확인 단계 (연한 파란색)
+- {설명}
+
+## 주요 체크포인트
+
+| 단계 | 확인 사항 | 도구/방법 |
+|------|----------|----------|
+| 1️⃣ ... | ... | ... |
+...
+
+## 담당팀 전달 기준  ← TS SOP에만 포함
+
+| 조건 | 전달 대상 | 필수 정보 |
+|------|----------|----------|
+...
+
+---
+
+**생성 정보**:
+- 원본 SOP: [{파일명}.sop.md](./{파일명}.sop.md)
+- 생성일: {YYYY-MM-DD}
+- 플로우차트 버전: v1.0
+- 데이터: {N}건 ({%}%)
+```
+
+**케이스별 설명에 자동화 정보 필수 포함:**
+- 각 케이스 설명에 **자동화 가능**: X% 와 사용 기술(RAG/Action/Rules) 을 반드시 기재
+- 이 정보는 Stage 5 Sales Report의 관여율/해결율 산출 근거로 활용됨
+
+**Expected Duration:** 1-2 minutes per SOP
 
 ### 5. Convert to SVG Image (CLI Required)
 
@@ -265,8 +333,9 @@ target_sops: all
 
 ## Related Documentation
 
-- **Stage 3 SOP Generation**: [stage3-sop-generation.sop.md](../agent-sops/stage3-sop-generation.sop.md)
-- **Full Pipeline**: [excel-to-sop-pipeline.sop.md](../agent-sops/excel-to-sop-pipeline.sop.md)
+- **Flowchart Template** ⭐: [FLOWCHART_template.md](../../../templates/FLOWCHART_template.md) — 반드시 이 템플릿을 기준으로 생성
+- **Stage 3 SOP Generation**: [stage3-sop-generation.sop.md](../../../agent-sops/stage3-sop-generation.sop.md)
+- **Full Pipeline**: [excel-to-sop-pipeline.sop.md](../../../agent-sops/excel-to-sop-pipeline.sop.md)
 - **Mermaid Documentation**: https://mermaid.js.org/
 
 ## Notes
