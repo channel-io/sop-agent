@@ -24,12 +24,11 @@ UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY")
 if not UPSTAGE_API_KEY:
     raise ValueError(
         "❌ UPSTAGE_API_KEY not found!\n\n"
-        "Please set your API key:\n"
-        "  1. Create .env file:\n"
-        "     cp .env.example .env\n\n"
-        "  2. Edit .env file and add:\n"
-        "     UPSTAGE_API_KEY=up_your_key_here\n\n"
-        "  3. Get API key from: https://console.upstage.ai/\n"
+        "📧 AX팀 Pete에게 요청하세요 😊\n\n"
+        "또는 직접 설정하려면:\n"
+        "  1. .env 파일 생성: cp .env.example .env\n"
+        "  2. .env 파일에 추가: UPSTAGE_API_KEY=up_your_key_here\n"
+        "  3. API 키 발급: https://console.upstage.ai/\n"
     )
 
 UPSTAGE_BASE_URL = "https://api.upstage.ai/v1"

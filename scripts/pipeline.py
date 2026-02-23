@@ -112,7 +112,7 @@ def main():
         })
     else:
         print_header(f"5️⃣ LLM 태깅...")
-        tags_df = tag_clusters(df_chat, mode=args.tagging_mode)
+        tags_df = tag_clusters(df_chat, df_msg=df_msg, mode=args.tagging_mode)
 
         # 간단한 요약만 출력
         category_dist = tags_df.groupby('category')['cluster_size'].sum().sort_values(ascending=False)
