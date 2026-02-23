@@ -93,7 +93,7 @@ def _tag_with_api(df, df_msg=None, llm_model=None, samples_per_cluster=None):
                 'cluster_size': len(cluster_df),
                 'label': '빈 데이터',
                 'category': '시스템',
-                'keywords': 'empty, 텍스트없음, 자동분류',
+                'keywords': ['empty', '텍스트없음', '자동분류'],
             })
             print(f"  ℹ️  클러스터 {cluster_id} ({len(cluster_df)}건): 빈 데이터 → 자동 분류")
             continue
