@@ -42,7 +42,6 @@ PROCESS_STEP_KEYWORDS = [
     "고객_정보_확인",
     "에스컬레이션",
     "as_에스컬레이션",
-    "에스컬레이션",
 ]
 
 FREQUENCY_TO_PCT = {

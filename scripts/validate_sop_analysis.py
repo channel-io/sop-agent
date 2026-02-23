@@ -29,7 +29,6 @@ PROCESS_STEP_PATTERNS = [
     "에스컬레이션",
     "as_에스컬레이션",
     "정보 확인",
-    "에스컬레이션",
 ]
 
 
@@ -107,7 +106,9 @@ def check_process_step_misuse(analysis_path: Path):
     hits = []
     for pat in PROCESS_STEP_PATTERNS:
         # 경로 헤더(### 경로 N:) 안에 해당 패턴이 있는지 확인
-        if re.search(r'###\s+경로\s+\d+.*' + pat.lower(), text):
+        # 패턴에 메타문자가 들어 있을 수 있으므로 이스케이프하여 리터럴 매칭
+        esc = re.escape(pat.lower())
+        if re.search(r'###\s+경로\s+\d+.*' + esc, text):
             hits.append(pat)
     return hits
 

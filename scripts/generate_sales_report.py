@@ -46,6 +46,13 @@ def calculate(cfg: dict) -> dict:
     bp      = cfg["base_params"]
     vol     = bp["monthly_volume"]      # 월 상담 건수
     sample  = bp["sample_size"]         # 분석 샘플 수
+
+    # 기본값 검증: 0 또는 음수일 경우 계산 전 에러
+    if sample <= 0:
+        raise ValueError(f"base_params.sample_size must be positive, got {sample!r}")
+    if vol <= 0:
+        raise ValueError(f"base_params.monthly_volume must be positive, got {vol!r}")
+
     wage    = bp["agent_hourly_wage"]   # 상담사 시급 (원)
     t_min   = bp["avg_handling_time_min"]           # 건당 평균 처리 시간 (분)
     c_chat  = bp["alf_chat_cost_per_conversation"]  # ALF 채팅 비용
@@ -63,8 +70,9 @@ def calculate(cfg: dict) -> dict:
         resolution_rate = resolved_sample / sample_count if sample_count else 0
 
         # 실제 월 건수로 스케일
-        monthly_count   = round(sample_count   / sample * vol)
-        monthly_resolved = round(resolved_sample / sample * vol)
+        # sample은 위에서 양수로 검증했지만 추가로 안전장치 적용
+        monthly_count   = round(sample_count   / sample * vol) if sample else 0
+        monthly_resolved = round(resolved_sample / sample * vol) if sample else 0
 
         groups.append({
             **grp,
@@ -122,7 +130,9 @@ def calculate(cfg: dict) -> dict:
             "groups": p1_groups,
             "monthly":   p1_monthly,
             "resolved":  p1_resolved,
-            "pct":       p1_monthly / vol,
+            # vol은 양수로 검증되어 있으므로 여기서는 그대로 사용하지만
+            # 추가적으로 방어적으로 0 분모 체크를 붙여 둠
+            "pct":       p1_monthly / vol if vol else 0,
             "alf_chat":  p1_alf_chat,
             "alf_total": p1_alf_total,
             "labor":     p1_labor,
@@ -137,7 +147,7 @@ def calculate(cfg: dict) -> dict:
         "full": {
             "monthly":    vol,
             "resolved":   total_resolved,
-            "res_rate":   total_resolved / vol,
+            "res_rate":   total_resolved / vol if vol else 0,
             "alf_chat":   full_alf_chat,
             "alf_task":   full_alf_task,
             "alf_total":  full_alf_total,
@@ -171,8 +181,8 @@ def build_report(cfg: dict, m: dict) -> str:
         "",
         f"> **작성일**: {rep_date} | **분석 기준**: 실제 상담 데이터 ({ref_mon} 기준 월 {fc(m['vol'])}건)",
         "",
-        "---",
-        "",
+        "| 업무 | 월 건수 | 해결율 | 처리 방식 |",
+        "|------|--------|--------|---------|",
     ]
 
     # ── 1. ROI 요약 ──────────────────────────────────────────────────────── #
@@ -242,7 +252,7 @@ def build_report(cfg: dict, m: dict) -> str:
         lines.append(
             f"| {g['group_name']} | 약 {fc(g['monthly_count'])}건 | {rate_str} | {api_str} |"
         )
-    p2_pct = p2["monthly"] / m["vol"]
+    p2_pct = p2["monthly"] / m["vol"] if m["vol"] else 0
     lines += [
         f"| **추가 소계** | **{fc(p2['monthly'])}건 ({p2_pct:.1%})** | — | — |",
         f"| **전체** | **{fc(m['vol'])}건 (100%)** | **{fp(full['res_rate'])}** | — |",
@@ -336,7 +346,7 @@ def build_report(cfg: dict, m: dict) -> str:
         "**자동화 가능 업무**",
         "",
         "| 업무 | 월 건수 | 해결율 | 처리 방식 |",
-        "|------|--------|--------|---------||",
+        "|------|--------|--------|---------|",
     ]
     for g in m["groups"]:
         res_pct = g["monthly_resolved"] / g["monthly_count"] if g["monthly_count"] else 0
@@ -386,7 +396,7 @@ def main():
     if args.output:
         out_path = Path(args.output)
     else:
-        out_path = config_path.parent / f"{cfg['company']}_sales_report.md"
+        out_path = config_path.parent / f"{cfg['company_name']}_sales_report.md"
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(report, encoding="utf-8")
