@@ -51,9 +51,9 @@ This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and 
   - `"standard"`: Balanced analysis, n_samples=20, full reports (default)
   - `"deep"`: Thorough analysis, n_samples=30-50, comprehensive reports
 
-- **focus_clusters** (default: "top_10"): Which clusters to prioritize
-  - `"top_10"`: Extract from top 10 largest clusters
+- **focus_clusters** (default: "all"): Which clusters to prioritize
   - `"all"`: Extract from all clusters
+  - `"top_10"`: Extract from top 10 largest clusters
   - List of IDs: e.g., `"0,2,5,7"` for specific clusters
 
 - **output_format** (default: "json"): Output file format
