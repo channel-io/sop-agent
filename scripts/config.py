@@ -24,7 +24,6 @@ UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY")
 if not UPSTAGE_API_KEY:
     raise ValueError(
         "❌ UPSTAGE_API_KEY not found!\n\n"
-        "📧 AX팀 Pete에게 요청하세요 😊\n\n"
         "또는 직접 설정하려면:\n"
         "  1. .env 파일 생성: cp .env.example .env\n"
         "  2. .env 파일에 추가: UPSTAGE_API_KEY=up_your_key_here\n"
