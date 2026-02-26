@@ -184,6 +184,15 @@ def build_report(cfg: dict, m: dict) -> str:
         "| 업무 | 월 건수 | 해결율 | 처리 방식 |",
         "|------|--------|--------|---------|",
     ]
+    for g in m["groups"]:
+        res_pct = g["monthly_resolved"] / g["monthly_count"] if g["monthly_count"] else 0
+        lines.append(
+            f"| {g['group_name']} | 약 {fc(g['monthly_count'])}건 | {fp(res_pct)} | {g['implementation']} |"
+        )
+    lines += [
+        f"| **합계** | **{fc(m['vol'])}건** | **{fp(full['res_rate'])}** | |",
+        "",
+    ]
 
     # ── 1. ROI 요약 ──────────────────────────────────────────────────────── #
     lines += [
@@ -227,14 +236,16 @@ def build_report(cfg: dict, m: dict) -> str:
         f"| **소계** | **{fc(p1['monthly'])}건 ({p1['pct']:.1%})** | **약 {fc(p1['resolved'])}건** |",
         "",
         "**필요 작업:**",
-        "- 규칙 설정: 톤앤매너, AS 주소·절차, 에스컬레이션 조건 → 2~3일",
-        "- 지식 DB 구축: AS 절차 FAQ, BIOS 가이드, 드라이버 링크, 재장착 영상 → 1~2주",
+    ]
+    for note in cfg.get("phase1_notes", []):
+        lines.append(f"- {note}")
+    lines += [
         "",
         "---",
         "",
-        "### 2단계 — API 연동 (전체 완성, 3~5개월)",
+        f"### 2단계 — API 연동 (전체 완성, {dev.get('phase2_duration', '미정')})",
         "",
-        "> OMS·배송 API 연동으로 나머지 업무 자동화 추가",
+        f"> {cfg.get('phase2_description', 'API 연동으로 나머지 업무 자동화 추가')}",
         "",
         "| 적용 업무 | 월 건수 | 해결율 | 필요 API |",
         "|---------|--------|--------|---------|",
@@ -258,8 +269,10 @@ def build_report(cfg: dict, m: dict) -> str:
         f"| **전체** | **{fc(m['vol'])}건 (100%)** | **{fp(full['res_rate'])}** | — |",
         "",
         "**필요 작업:**",
-        "- OMS API 시나리오 (배송 조회, 취소 처리, 보증 확인): 6~10주",
-        "- 배송사 API + 견적 DB 연동: 4~8주",
+    ]
+    for note in cfg.get("phase2_notes", []):
+        lines.append(f"- {note}")
+    lines += [
         "",
         "---",
         "",

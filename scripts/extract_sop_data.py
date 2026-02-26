@@ -37,19 +37,29 @@ from pathlib import Path
 
 # ─────────────────────── 공통 프로세스 단계 패턴 (경로로 오인하기 쉬운 것들) ────── #
 
-PROCESS_STEP_KEYWORDS = [
-    "정보_확인_요청",
-    "고객_정보_확인",
-    "에스컬레이션",
-    "as_에스컬레이션",
-]
+class ProcessStep:
+    KEYWORDS = [
+        "정보_확인_요청",
+        "고객_정보_확인",
+        "에스컬레이션",
+        "as_에스컬레이션",
+    ]
+    EXTRA_KEYWORDS = ["에스컬", "escalat", "전달", "공지"]
 
-FREQUENCY_TO_PCT = {
-    "very high": 85,
-    "high":      45,
-    "medium":    25,
-    "low":       10,
-}
+
+class FrequencyRate:
+    TO_PCT = {
+        "very high": 85,
+        "high":      45,
+        "medium":    25,
+        "low":       10,
+    }
+
+
+class PatternClass:
+    INQUIRY_PATH = "inquiry_path"
+    PROCESS_STEP = "process_step"
+    UNKNOWN      = "unknown"
 
 
 # ──────────────────────────────── Flowchart parser ────────────────────────── #
@@ -155,16 +165,15 @@ def parse_flowchart(flowchart_path: Path) -> list[dict]:
 def classify_pattern(pattern_name: str) -> str:
     """
     패턴명이 '독립 문의 경로'인지 '공통 프로세스 단계'인지 분류.
-    Returns: "inquiry_path" | "process_step" | "unknown"
+    Returns: PatternClass.INQUIRY_PATH | PatternClass.PROCESS_STEP
     """
     lower = pattern_name.lower()
-    for kw in PROCESS_STEP_KEYWORDS:
+    for kw in ProcessStep.KEYWORDS:
         if kw.lower() in lower:
-            return "process_step"
-    # 에스컬레이션 관련 키워드
-    if any(k in lower for k in ["에스컬", "escalat", "전달", "공지"]):
-        return "process_step"
-    return "inquiry_path"
+            return PatternClass.PROCESS_STEP
+    if any(k in lower for k in ProcessStep.EXTRA_KEYWORDS):
+        return PatternClass.PROCESS_STEP
+    return PatternClass.INQUIRY_PATH
 
 
 def parse_sop_patterns(sop_path: Path) -> dict:
@@ -227,7 +236,7 @@ def parse_sop_patterns(sop_path: Path) -> dict:
         name      = line_m.group(1).strip()
         frequency = line_m.group(2).strip().lower()
         explicit_pct = int(line_m.group(3)) if line_m.group(3) else None
-        estimated_pct = explicit_pct if explicit_pct else FREQUENCY_TO_PCT.get(frequency)
+        estimated_pct = explicit_pct if explicit_pct else FrequencyRate.TO_PCT.get(frequency)
 
         patterns.append({
             "name":           name,
@@ -248,7 +257,7 @@ def map_volumes(cases: list[dict], patterns: list[dict]) -> list[dict]:
     매핑 전략: 케이스명 키워드 ↔ 패턴명 키워드 fuzzy match
     매핑 실패 시 null 유지 (LLM이 추산 처리).
     """
-    inquiry_patterns = [p for p in patterns if p["classification"] == "inquiry_path"]
+    inquiry_patterns = [p for p in patterns if p["classification"] == PatternClass.INQUIRY_PATH]
 
     for case in cases:
         if case["volume_pct"] is not None:
@@ -305,7 +314,7 @@ def extract_one(flowchart_path: Path, sop_path: Path, sample_count) -> dict:
         "flowchart_cases":   cases,
         "data_patterns":     patterns,
         "process_step_patterns": [
-            p["name"] for p in patterns if p["classification"] == "process_step"
+            p["name"] for p in patterns if p["classification"] == PatternClass.PROCESS_STEP
         ],
     }
 
@@ -326,7 +335,8 @@ def main():
     if args.metadata:
         meta = json.loads(Path(args.metadata).read_text(encoding="utf-8"))
         for entry in meta.get("sop_files", []):
-            sop_name = Path(entry["filename"]).stem
+            fname = entry.get("filename") or entry.get("file", "")
+            sop_name = Path(fname).name.replace(".sop.md", "")
             sample_counts[sop_name] = entry.get("cluster_size", 0)
 
     # SOP-FLOWCHART 쌍 수집
@@ -360,7 +370,7 @@ def main():
                 "data_patterns":     sop_parsed["patterns"],
                 "process_step_patterns": [
                     p["name"] for p in sop_parsed["patterns"]
-                    if p["classification"] == "process_step"
+                    if p["classification"] == PatternClass.PROCESS_STEP
                 ],
             }
 
