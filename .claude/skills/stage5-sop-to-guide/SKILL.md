@@ -1,6 +1,6 @@
 ---
 name: stage5-sop-to-guide
-description: Generate an ALF implementation package from all pipeline outputs. Produces rules draft, RAG knowledge items, dialog type cross-analysis heatmap, automation feasibility analysis, ROI calculation, and final integrated report. **Language:** All user interactions MUST be conducted in Korean (한국어).
+description: Generate an ALF implementation package from all pipeline outputs. Produces rules draft, RAG knowledge items, dialog type cross-analysis heatmap, automation feasibility analysis, ROI calculation, and final integrated report. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
 ---
 
 # Stage 5: ALF 구축 패키지 생성
@@ -10,7 +10,7 @@ description: Generate an ALF implementation package from all pipeline outputs. P
 Stage 1~3 산출물을 모두 활용하여 ALF(AI 챗봇) 도입을 위한 **구축 패키지**를 생성합니다.
 단순 ROI 리포트를 넘어, 실제 챗봇 구축에 필요한 규칙 초안·RAG 항목·자동화 전략을 함께 제공합니다.
 
-**Language:** All user interactions MUST be conducted in Korean (한국어).
+**Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
 **입력 파일:**
 ```

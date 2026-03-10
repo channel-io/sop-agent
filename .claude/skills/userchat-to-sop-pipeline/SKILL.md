@@ -10,7 +10,7 @@ version: "1.0"
 ## Overview
 This SOP orchestrates the complete end-to-end pipeline for transforming Excel customer support data into production-ready Agent SOP documents with visual flowcharts. It integrates all four stages: Clustering (Python), Pattern Extraction (LLM), SOP Generation (LLM), and Flowchart Generation (LLM + Mermaid).
 
-**Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+**Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
 **Pipeline Flow:**
 ```
@@ -39,6 +39,10 @@ Output: Ready-to-deploy Agent SOP + Visual Flowcharts
 ## Parameters
 
 ### Required Parameters
+- **language** (default: "ko"): Output language for clustering labels and LLM prompts
+  - `"ko"`: Korean (한국어)
+  - `"ja"`: Japanese (日本語)
+
 - **mode** (default: "standard"): Pipeline execution mode - controls analysis depth across ALL stages
   - `"quick"`: Fast pipeline, skips reports, same sample size (~12-15 min)
     - Stage 1: Skip analysis_report.md
@@ -99,6 +103,8 @@ Note: Stage 4 (Flowchart Generation)은 기본적으로 활성화되어 있으�
 Validate environment and prepare for execution.
 
 **Actions:**
+- Ask user to select language (Korean / Japanese) using AskUserQuestion if not already specified
+- Set `language` variable (`"ko"` or `"ja"`) — all subsequent Python script executions MUST be prefixed with `LANGUAGE={language}`
 - Validate Python clustering package is installed
 - Check .env file with UPSTAGE_API_KEY
 - Print pipeline configuration
@@ -284,7 +290,7 @@ Use LLM to generate final Agent SOP document from extracted patterns with mode-a
 - [ ] Steps reference extracted patterns and FAQs
 - [ ] Examples are concrete and realistic
 - [ ] Troubleshooting section addresses common issues
-- [ ] Korean text is natural and professional
+- [ ] Text is natural and professional in the detected language
 - [ ] `metadata.json` is complete and accurate
 
 **Stage Transition:**

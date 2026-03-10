@@ -1,6 +1,6 @@
 ---
 name: stage3-sop-generation
-description: This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Excel-to-SOP pipeline, performed entirely by the AI agent using natural language composition.  **Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.  **Stage Flow:** - **Input**: Stage 2 extraction results (JSON files with patterns, FAQs, strategies) - **Process**: LLM composition of Agent SOP following standard format - **Output**: Agent SOP document (.sop.md) ready for deployment  **Key Capabilities:** - Generate Agent SOP in standardized format (RFC 2119 compliant) - Transform extracted patterns into parameterized workflows - Create constraint-based steps with MUST/SHOULD/MAY keywords - Include examples and troubleshooting sections - Ensure reusability across different customer support scenarios
+description: This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Excel-to-SOP pipeline, performed entirely by the AI agent using natural language composition.  **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.  **Stage Flow:** - **Input**: Stage 2 extraction results (JSON files with patterns, FAQs, strategies) - **Process**: LLM composition of Agent SOP following standard format - **Output**: Agent SOP document (.sop.md) ready for deployment  **Key Capabilities:** - Generate Agent SOP in standardized format (RFC 2119 compliant) - Transform extracted patterns into parameterized workflows - Create constraint-based steps with MUST/SHOULD/MAY keywords - Include examples and troubleshooting sections - Ensure reusability across different customer support scenarios
 type: anthropic-skill
 version: "1.0"
 ---
@@ -10,7 +10,7 @@ version: "1.0"
 ## Overview
 This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Excel-to-SOP pipeline, performed entirely by the AI agent using natural language composition.
 
-**Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+**Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
 **Stage Flow:**
 - **Input**: Stage 2 extraction results (JSON files with patterns, FAQs, strategies)
@@ -132,7 +132,7 @@ Plan the Agent SOP structure based on extracted patterns.
 
 ### Optional
 - **escalation_needed**: Pre-identified escalation flag
-- **language**: Response language (default: Korean)
+- **language**: Response language (default: Korean, also supports Japanese)
 
 ## Steps
 ### 1. Classify Inquiry
@@ -354,7 +354,7 @@ Analyze the customer message to determine inquiry type using keyword matching.
 - You MUST assign "general_inquiry" if no keywords match
 
 **Process:**
-1. Extract keywords from customer message (Korean NLP or simple matching)
+1. Extract keywords from customer message (NLP or simple matching for the detected language)
 2. Match against keyword taxonomy:
    - A/S keywords: 충전, 수리, 고장, AS, 교체 → `a_s_request`
    - 배송 keywords: 배송, 조회, 송장, 언제도착 → `delivery_inquiry`
@@ -365,7 +365,7 @@ Analyze the customer message to determine inquiry type using keyword matching.
 
 **Tools Required:**
 - Keyword taxonomy from `keywords.json`
-- (Optional) Korean tokenizer for better keyword extraction
+- (Optional) tokenizer for the detected language for better keyword extraction
 
 **Expected Output:**
 - `inquiry_type`: one of [a_s_request, delivery_inquiry, product_question, order_change, complaint]
@@ -465,7 +465,7 @@ Generate appropriate response using pattern-matched templates.
 **Constraints:**
 - You MUST use response strategy from `response_strategies.json` for the inquiry type
 - You MUST personalize response with customer name (if available)
-- You SHOULD use friendly, professional Korean tone
+- You SHOULD use friendly, professional tone in the detected language
 - You SHOULD include next steps or follow-up actions
 - You MAY offer related information (FAQs, product links)
 - You MUST NOT use overly formal or robotic language
@@ -501,7 +501,7 @@ Channel Corp. 고객센터
 ```
 
 **Expected Output:**
-- Complete, ready-to-send response message in Korean
+- Complete, ready-to-send response message in the detected language
 - Personalized with customer and product details
 - Includes actionable next steps
 
@@ -697,7 +697,7 @@ Write results/{company}/03_sop/{company}_support.sop.md
 - [ ] All sections present (Overview, Parameters, Steps, Examples)
 - [ ] RFC 2119 keywords used correctly
 - [ ] No placeholder text (e.g., "[TODO]", "[Fill in]")
-- [ ] Korean text is natural and professional
+- [ ] Text is natural and professional in the detected language
 - [ ] Examples are concrete and realistic
 - [ ] File size reasonable (500-2000 lines)
 
@@ -960,7 +960,7 @@ Before finalizing SOP:
 - [ ] Response strategies map to Steps
 - [ ] Escalation rules are clearly defined
 - [ ] Examples use real customer messages
-- [ ] Korean text is natural and professional
+- [ ] Text is natural and professional in the detected language
 - [ ] No company-specific secrets or PII exposed
 - [ ] RFC 2119 keywords used correctly
 - [ ] All sections are complete (no TODOs)
