@@ -1,0 +1,66 @@
+tagging:
+  empty_label: "空データ"
+  empty_category: "システム"
+  empty_keywords: "empty, テキスト無し, 自動分類"
+  empty_log: "クラスター {cluster_id} ({size}件): 空データ → 自動分類"
+  source_real: "実際の会話メッセージ"
+  source_real_short: "実際の会話"
+  source_summary: "要約テキスト"
+  conv_block_header: "[相談 {i}]"
+  cluster_block_header: "[クラスター {cluster_id}] (n={size}件)"
+  default_label: "クラスター {cluster_id}"
+  default_category: "その他"
+  agent_fallback_log: "Agentタグ付け失敗 (エラー: {error}), API方式にフォールバック..."
+  label_instruction: "簡潔な日本語ラベル (3〜8文字)"
+  api_prompt: |
+    以下は顧客サポートの{source_label}です。このクラスターを代表するラベルを生成してください。
+
+    クラスターサイズ: {cluster_size}件
+
+    サンプル ({n_samples}件):
+    {sample_text}
+
+    以下の形式でJSON回答:
+    {{
+      "label": "{label_instruction}",
+      "category": "適切なカテゴリ (自由に設定)",
+      "keywords": ["キーワード1", "キーワード2", "キーワード3"]
+    }}
+  agent_prompt: |
+    以下は顧客サポートデータをクラスタリングした結果です。各クラスターには{source_label}が含まれています。
+
+    {all_clusters_text}
+
+    あなたの任務:
+    1. 全クラスターを分析し、このデータセットの特性（業種、問い合わせ種別）を把握してください
+    2. データに適したカテゴリ体系を作成してください（5〜10個程度）
+    3. 各クラスターを一貫した基準で分類してください
+
+    要件:
+    - カテゴリは相互排他的で全体を網羅すること
+    - クラスター間を比較し、一貫した基準で分類
+    - 「その他」は最小限に（本当に分類不可能な場合のみ）
+    - ラベルは簡潔に3〜8文字
+
+    以下の形式のJSON配列で回答:
+    [
+      {{
+        "cluster_id": 0,
+        "cluster_size": 100,
+        "label": "配送遅延問い合わせ",
+        "category": "配送",
+        "keywords": ["配送", "遅延", "照会"]
+      }},
+      ...
+    ]
+
+    JSONのみ出力してください（追加説明不要）。
+
+config:
+  api_key_error: |
+    ❌ UPSTAGE_API_KEY が見つかりません！
+
+    直接設定する場合:
+      1. .envファイルを作成: cp .env.example .env
+      2. .envファイルに追加: UPSTAGE_API_KEY=up_your_key_here
+      3. APIキーの発行: https://console.upstage.ai/

@@ -1,6 +1,6 @@
 ---
 name: stage2-extraction
-description: This SOP guides the real sample-based LLM extraction of patterns, FAQs, and response strategies from clustered customer support data. This is Stage 2 of the Excel-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis. **Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+description: This SOP guides the real sample-based LLM extraction of patterns, FAQs, and response strategies from clustered customer support data. This is Stage 2 of the Excel-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
 type: anthropic-skill
 version: "1.0"
 ---
@@ -10,7 +10,7 @@ version: "1.0"
 ## Overview
 This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and response strategies from clustered customer support data. This is **Stage 2** of the Excel-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis.
 
-**Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+**Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
 **Stage Flow:**
 - **Input**: Stage 1 clustering results (Excel files + analysis report)
@@ -129,7 +129,7 @@ For each cluster, identify common patterns, inquiry types, and response needs by
 - You MUST categorize patterns by: `정보_요청`, `문제_신고`, `프로세스_문의`, `불만_제기`
 - You SHOULD measure frequency by counting pattern occurrences in samples
 - You MAY group similar patterns together
-- You MUST output patterns in Korean (original customer language)
+- You MUST output patterns in the customer's language
 
 **Critical Requirement:**
 ❌ **DO NOT** create patterns based on general business knowledge or assumptions
@@ -160,7 +160,7 @@ for cluster_id in target_clusters:
 **Pattern Analysis Framework:**
 
 After reading samples, extract for each cluster:
-1. **Pattern Name**: Short descriptive label (Korean)
+1. **Pattern Name**: Short descriptive label (in customer's language)
 2. **Pattern Type**: `정보_요청`, `문제_신고`, `프로세스_문의`, `불만_제기`
 3. **Common Phrases**: 3-5 actual phrases from samples (verbatim!)
 4. **Intent**: What the customer wants to achieve
@@ -405,7 +405,7 @@ Before generating FAQs, identify the company's tone from actual samples:
 ```
 
 **Generation Guidelines:**
-- **Questions**: Use casual, conversational Korean (customers' actual language)
+- **Questions**: Use casual, conversational language matching the customer's language
 - **Answers**: Professional but friendly tone, step-by-step format preferred
 - **Escalation**: When to transfer to human agent or specialized team
 - **Keywords**: For search and categorization
@@ -486,7 +486,7 @@ Create a structured keyword taxonomy for search and categorization.
 - You MUST group keywords hierarchically (category → subcategory → keywords)
 - You SHOULD identify synonyms and variations
 - You MAY include common typos or abbreviations
-- You MUST use Korean keywords (customer language)
+- You MUST use keywords in the customer's language
 
 **Keyword Taxonomy Structure:**
 ```json

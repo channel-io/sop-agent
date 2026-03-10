@@ -10,7 +10,7 @@ version: "1.0"
 ## Overview
 This SOP orchestrates the complete end-to-end pipeline for transforming Excel customer support data into production-ready Agent SOP documents with visual flowcharts. It integrates all four stages: Clustering (Python), Pattern Extraction (LLM), SOP Generation (LLM), and Flowchart Generation (LLM + Mermaid).
 
-**Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+**Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
 **Pipeline Flow:**
 ```
@@ -284,7 +284,7 @@ Use LLM to generate final Agent SOP document from extracted patterns with mode-a
 - [ ] Steps reference extracted patterns and FAQs
 - [ ] Examples are concrete and realistic
 - [ ] Troubleshooting section addresses common issues
-- [ ] Korean text is natural and professional
+- [ ] Text is natural and professional in the detected language
 - [ ] `metadata.json` is complete and accurate
 
 **Stage Transition:**

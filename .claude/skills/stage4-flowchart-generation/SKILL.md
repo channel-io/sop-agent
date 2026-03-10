@@ -1,6 +1,6 @@
 ---
 name: stage4-flowchart-generation
-description: Generate Mermaid flowcharts from Stage 3 SOP documents and convert to SVG images. Visualizes customer support processes with color-coded decision trees. **Language:** All user interactions MUST be conducted in Korean (한국어).
+description: Generate Mermaid flowcharts from Stage 3 SOP documents and convert to SVG images. Visualizes customer support processes with color-coded decision trees. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
 type: anthropic-skill
 version: "1.0"
 ---
@@ -10,7 +10,7 @@ version: "1.0"
 ## Overview
 This SOP guides the automatic generation of Mermaid flowcharts from SOP documents created in Stage 3. This is **Stage 4** (optional enhancement stage) of the Excel-to-SOP pipeline, performed by the AI agent using natural language analysis and Mermaid diagram generation.
 
-**Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+**Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
 **Stage Flow:**
 ```
@@ -35,6 +35,7 @@ Output: Flowchart Markdown + SVG files
   - Must contain `.sop.md` files
 
 ### Optional
+- **output_dir** (default: derived from sop_dir as `{sop_dir}/../04_flowcharts`): Directory to save flowchart files. Defaults to a sibling `04_flowcharts/` directory next to `03_sop/`.
 - **mode** (default: "standard"): Flowchart generation depth mode
   - `"quick"`: Simple flowcharts (5-10 nodes), basic decision tree only
   - `"standard"`: Balanced flowcharts (15-30 nodes), main process flows (default)
@@ -64,6 +65,8 @@ Verify Stage 3 SOP files and Mermaid CLI installation.
 
 **Actions:**
 - Check `sop_dir` exists and contains `.sop.md` files
+- Derive `output_dir` if not provided: `{sop_dir}/../04_flowcharts` (e.g., `results/{company}/04_flowcharts`)
+- Create output directory: `mkdir -p {output_dir}`
 - Verify Mermaid CLI is installed: `mmdc --version`
 - If CLI not installed:
   - ⚠️ Warn user that SVG generation will be skipped
@@ -76,6 +79,7 @@ Verify Stage 3 SOP files and Mermaid CLI installation.
 ```
 ✅ Stage 4 준비 완료
   - SOP 디렉토리: results/{company}/03_sop
+  - 출력 디렉토리: results/{company}/04_flowcharts (생성됨)
   - 발견된 SOP: 7개 (TS: 4개, HT: 3개)
   - 처리 대상: 7개 (전체) 또는 4개 (TS만) 또는 3개 (HT만)
   - Mermaid CLI: 설치됨 (v11.12.0)
@@ -86,6 +90,7 @@ Verify Stage 3 SOP files and Mermaid CLI installation.
 ```
 ✅ Stage 4 준비 완료
   - SOP 디렉토리: results/{company}/03_sop
+  - 출력 디렉토리: results/{company}/04_flowcharts (생성됨)
   - 발견된 SOP: 7개 (TS: 4개, HT: 3개)
   - 처리 대상: 7개 (전체) 또는 4개 (TS만) 또는 3개 (HT만)
   - Mermaid CLI: ❌ 미설치
@@ -126,9 +131,11 @@ This template defines the official color scheme (`classDef`), node shapes, namin
   classDef dangerClass  fill:#f8d7da,stroke:#dc3545,stroke-width:2px
   classDef infoClass    fill:#d1ecf1,stroke:#17a2b8,stroke-width:2px
   classDef processClass fill:#e7f3ff,stroke:#0056b3,stroke-width:2px
+  classDef apiClass     fill:#fff0c0,stroke:#e6a817,stroke-width:2px,stroke-dasharray:5 5
   ```
 - Apply classes with `class NodeA,NodeB successClass` at the end of the diagram
-- Node shapes: `([...])` start/end, `{...}` decision, `[...]` process
+- Node shapes: `([...])` start/end, `{...}` decision, `[...]` process, `[[...]]` API 호출 노드
+- **API 호출 노드**: 외부 API를 실제로 호출하는 단계에 `[[API 이름<br>반환 필드 확인]]` 형태로 표현하고 `apiClass` 적용 (점선 노란 테두리)
 - No double-quotes inside node labels — use `<br/>` for line breaks
 - Keep node text ≤ 15 characters per line
 
@@ -145,6 +152,7 @@ This template defines the official color scheme (`classDef`), node shapes, namin
 ### 4. Create Flowchart Markdown File
 
 Write complete flowchart documentation following **`templates/FLOWCHART_template.md`** structure exactly.
+Save each flowchart file to `{output_dir}/{SOP_ID}_FLOWCHART.md` (NOT inside the sop_dir).
 
 **You MUST use this section order:**
 
@@ -219,7 +227,7 @@ Use Mermaid CLI to generate SVG images if installed.
 - Check if Mermaid CLI is installed
 - **If installed:**
   ```bash
-  mmdc -i {SOP_ID}_FLOWCHART.md -o {SOP_ID}_flowchart.svg -b transparent
+  mmdc -i {output_dir}/{SOP_ID}_FLOWCHART.md -o {output_dir}/{SOP_ID}_flowchart.svg -b transparent
   ```
 - **If not installed:**
   - Skip SVG generation
@@ -262,8 +270,8 @@ output_format: both
 ```
 
 **Output:**
-- 7 Markdown files (TS_001~004_FLOWCHART.md, HT_001~003_FLOWCHART.md)
-- 7 SVG images (~170KB each)
+- 7 Markdown files in `04_flowcharts/` (TS_001~004_FLOWCHART.md, HT_001~003_FLOWCHART.md)
+- 7 SVG images (~170KB each) in `04_flowcharts/`
 - 1 Summary report
 - Updated metadata.json
 

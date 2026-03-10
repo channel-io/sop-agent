@@ -1,6 +1,6 @@
 ---
 name: stage1-clustering
-description: This sop executes automated clustering and tagging of customer support chat data through a Python pipeline, producing clustered data, cluster tags, and a comprehensive analysis report for Stage 2 (Pattern Extraction). The agent orchestrates the Python clustering script, monitors execution, validates outputs, and generates an analysis report to guide subsequent extraction work.  **Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+description: This sop executes automated clustering and tagging of customer support chat data through a Python pipeline, producing clustered data, cluster tags, and a comprehensive analysis report for Stage 2 (Pattern Extraction). The agent orchestrates the Python clustering script, monitors execution, validates outputs, and generates an analysis report to guide subsequent extraction work.  **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
 type: anthropic-skill
 version: "1.0"
 ---
@@ -11,7 +11,7 @@ version: "1.0"
 
 This sop executes automated clustering and tagging of customer support chat data through a Python pipeline, producing clustered data, cluster tags, and a comprehensive analysis report for Stage 2 (Pattern Extraction). The agent orchestrates the Python clustering script, monitors execution, validates outputs, and generates an analysis report to guide subsequent extraction work.
 
-**Language:** All user interactions MUST be conducted in Korean (한국어). Questions, confirmations, and outputs should be in Korean unless the user explicitly requests English.
+**Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
 ## Parameters
 
@@ -36,7 +36,7 @@ This sop executes automated clustering and tagging of customer support chat data
 - You MUST scan data/ directory and provide available Excel files as options for input_file
 - You MUST suggest common output directories (e.g., results/company_name) as options
 - You MUST extract company name from filename and provide as default option
-- You MUST communicate with the user in Korean throughout the entire workflow
+- You MUST communicate with the user in the detected language throughout the entire workflow
 - You MUST use tagging_mode="agent" as default (Solar-pro unified tagging, do NOT ask about tagging mode)
 - You MUST validate that selected input_file exists and has correct Excel format
 - You MUST create output_dir if it doesn't exist
@@ -77,7 +77,7 @@ Scan available files and gather parameters through interactive selection.
 - You MUST extract company name from selected filename (e.g., "user_chat_assacom.xlsx" → "assacom")
 - You MUST suggest output_dir based on company name (e.g., "results/assacom")
 - You MUST verify .env file exists: `test -f .env`
-- You MUST create output_dir if missing: `mkdir -p {output_dir}`
+- You MUST create output subdirectory: `mkdir -p {output_dir}/01_classification`
 - You MUST NOT proceed if input validation fails
 - You MUST adjust parameters based on mode:
   - **Quick**: sample_size=1000 (default), k_range=default
@@ -130,7 +130,7 @@ Run the Python clustering script with Solar-pro agent tagging and monitor execut
   ```bash
   python3 scripts/pipeline.py \
     --input {input_file} \
-    --output {output_dir} \
+    --output {output_dir}/01_classification \
     --prefix {company} \
     --sample {sample_size} \
     --tagging-mode agent \
@@ -171,8 +171,8 @@ K=20: Silhouette=0.064
 
 [6/6] Saving results...
 ✓ Results saved:
-  - results/company/company_clustered.xlsx (with tags)
-  - results/company/company_tags.xlsx
+  - results/company/01_classification/company_clustered.xlsx (with tags)
+  - results/company/01_classification/company_tags.xlsx
 
 📊 Category Distribution:
   - 구매 상담: 214건 (21.4%)
@@ -190,9 +190,9 @@ Validate output files with tags and check data quality.
 
 **Constraints:**
 - You MUST verify both output files exist:
-  - `test -f {output_dir}/{company}_clustered.xlsx`
-  - `test -f {output_dir}/{company}_tags.xlsx`
-- You MUST check file sizes are non-zero: `ls -lh {output_dir}/{company}_*.xlsx`
+  - `test -f {output_dir}/01_classification/{company}_clustered.xlsx`
+  - `test -f {output_dir}/01_classification/{company}_tags.xlsx`
+- You MUST check file sizes are non-zero: `ls -lh {output_dir}/01_classification/{company}_*.xlsx`
 - You MUST read and display cluster distribution from tags file
 - You MUST check for data quality issues:
   - Empty cluster labels
@@ -214,8 +214,8 @@ Validate output files with tags and check data quality.
 **Expected Outputs:**
 ```
 ✅ Output files validated:
-  - company_clustered.xlsx (1.2 MB, 1,645 rows)
-  - company_tags.xlsx (12 KB, 10 rows)
+  - 01_classification/company_clustered.xlsx (1.2 MB, 1,645 rows)
+  - 01_classification/company_tags.xlsx (12 KB, 10 rows)
 
 📊 Cluster Distribution:
   1. AS_접수 (A/S): 120건 (7.3%)
@@ -238,16 +238,16 @@ Create comprehensive analysis report for Stage 2 guidance.
 
 **Constraints:**
 - You MUST read both output Excel files to gather statistics
-- You MUST create analysis report at: `{output_dir}/analysis_report.md`
+- You MUST create analysis report at: `{output_dir}/01_classification/analysis_report.md`
 - You MUST include the following sections:
-  - Executive Summary (3-5 sentences in Korean)
+  - Executive Summary (3-5 sentences in the detected language)
   - Cluster Distribution (category breakdown, size statistics)
   - Top 10 Customer Issues (with keywords and response strategies)
   - Quality Metrics (silhouette score, text enhancement rate)
   - Insights & Recommendations (operational insights, automation opportunities)
   - Next Steps for Stage 2 (focus areas, priorities)
 - You MUST extract 3-5 sample messages per top cluster
-- You MUST write all analysis content in Korean (except section titles)
+- You MUST write all analysis content in the detected language (except section titles)
 - You SHOULD calculate useful metrics (average cluster size, category concentration)
 - You SHOULD identify patterns and trends in the data
 - You MAY include visualization suggestions
@@ -259,7 +259,7 @@ Create comprehensive analysis report for Stage 2 guidance.
 # Customer Support Clustering Analysis Report: {Company}
 
 ## Executive Summary
-[3-5 sentences in Korean summarizing key findings]
+[3-5 sentences in the detected language summarizing key findings]
 
 ## 1. Cluster Distribution
 ### 1.1 Category Breakdown
@@ -310,7 +310,7 @@ Create comprehensive analysis report for Stage 2 guidance.
 **Expected Outputs:**
 ```
 ✅ Analysis report generated:
-   results/company/analysis_report.md (15 KB)
+   results/company/01_classification/analysis_report.md (15 KB)
 
 📋 Report highlights:
   - 10 clusters identified
@@ -346,9 +346,9 @@ Present results and confirm readiness for Stage 2.
   - Top Category: {category} ({percentage}%)
 
 📁 Output Files:
-  1. Clustered Data: {output_dir}/{company}_clustered.xlsx
-  2. Cluster Tags: {output_dir}/{company}_tags.xlsx
-  3. Analysis Report: {output_dir}/analysis_report.md
+  1. Clustered Data: {output_dir}/01_classification/{company}_clustered.xlsx
+  2. Cluster Tags: {output_dir}/01_classification/{company}_tags.xlsx
+  3. Analysis Report: {output_dir}/01_classification/analysis_report.md
 
 💡 Key Findings:
   - {finding_1}

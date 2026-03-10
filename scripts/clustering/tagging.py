@@ -8,6 +8,7 @@ from ..config import (
     LLM_TEMPERATURE,
     LLM_SAMPLES_PER_CLUSTER
 )
+from ..lang_config import L
 
 # ───────────────────────────────────────────────────────────── #
 # 실제 대화 메시지 추출
@@ -91,29 +92,26 @@ def _tag_with_api(df, df_msg=None, llm_model=None, samples_per_cluster=None):
             cluster_tags.append({
                 'cluster_id': cluster_id,
                 'cluster_size': len(cluster_df),
-                'label': '빈 데이터',
-                'category': '시스템',
-                'keywords': ['empty', '텍스트없음', '자동분류'],
+                'label': L.tagging.empty_label,
+                'category': L.tagging.empty_category,
+                'keywords': L.tagging.empty_keywords.split(', '),
             })
-            print(f"  ℹ️  클러스터 {cluster_id} ({len(cluster_df)}건): 빈 데이터 → 자동 분류")
+            print(f"  ℹ️  {L.tagging.empty_log.format(cluster_id=cluster_id, size=len(cluster_df))}")
             continue
 
-        sample_text = "\n\n".join([f"[상담 {i+1}]\n{conv}" for i, conv in enumerate(samples)])
-        source_label = "실제 대화" if df_msg is not None else "요약 텍스트"
+        sample_text = "\n\n".join([
+            f"{L.tagging.conv_block_header.format(i=i+1)}\n{conv}"
+            for i, conv in enumerate(samples)
+        ])
+        source_label = L.tagging.source_real_short if df_msg is not None else L.tagging.source_summary
 
-        prompt = f"""다음은 고객 상담 {source_label}입니다. 이 클러스터를 대표하는 라벨을 생성하세요.
-
-클러스터 크기: {len(cluster_df)}건
-
-샘플 ({len(samples)}건):
-{sample_text}
-
-다음 형식으로 JSON 응답:
-{{
-  "label": "간결한 한글 라벨 (3-8자)",
-  "category": "적절한 카테고리 (자유롭게)",
-  "keywords": ["키워드1", "키워드2", "키워드3"]
-}}"""
+        prompt = L.tagging.api_prompt.format(
+            source_label=source_label,
+            cluster_size=len(cluster_df),
+            n_samples=len(samples),
+            sample_text=sample_text,
+            label_instruction=L.tagging.label_instruction,
+        )
 
         try:
             response = client.chat.completions.create(
@@ -126,16 +124,16 @@ def _tag_with_api(df, df_msg=None, llm_model=None, samples_per_cluster=None):
             cluster_tags.append({
                 'cluster_id': cluster_id,
                 'cluster_size': len(cluster_df),
-                'label': result_json.get('label', f'클러스터 {cluster_id}'),
-                'category': result_json.get('category', '기타'),
+                'label': result_json.get('label', L.tagging.default_label.format(cluster_id=cluster_id)),
+                'category': result_json.get('category', L.tagging.default_category),
                 'keywords': ', '.join(result_json.get('keywords', [])),
             })
         except Exception:
             cluster_tags.append({
                 'cluster_id': cluster_id,
                 'cluster_size': len(cluster_df),
-                'label': f'클러스터 {cluster_id}',
-                'category': '기타',
+                'label': L.tagging.default_label.format(cluster_id=cluster_id),
+                'category': L.tagging.default_category,
                 'keywords': '',
             })
 
@@ -157,7 +155,7 @@ def _tag_with_agent(df, df_msg=None, llm_model=None, samples_per_cluster=None):
     cluster_summaries = []
     empty_cluster_tags = []
 
-    source_label = "실제 대화 메시지" if df_msg is not None else "요약 텍스트"
+    source_label = L.tagging.source_real if df_msg is not None else L.tagging.source_summary
 
     for cluster_id in sorted(df['cluster_id'].unique()):
         cluster_df = df[df['cluster_id'] == cluster_id]
@@ -173,59 +171,34 @@ def _tag_with_agent(df, df_msg=None, llm_model=None, samples_per_cluster=None):
             empty_cluster_tags.append({
                 'cluster_id': cluster_id,
                 'cluster_size': len(cluster_df),
-                'label': '빈 데이터',
-                'category': '시스템',
-                'keywords': 'empty, 텍스트없음, 자동분류',
+                'label': L.tagging.empty_label,
+                'category': L.tagging.empty_category,
+                'keywords': L.tagging.empty_keywords,
             })
-            print(f"  ℹ️  클러스터 {cluster_id} ({len(cluster_df)}건): 빈 데이터 → 자동 분류")
+            print(f"  ℹ️  {L.tagging.empty_log.format(cluster_id=cluster_id, size=len(cluster_df))}")
             continue
 
         if df_msg is not None:
-            # 실제 대화: 상담별 블록으로 포맷
             conv_blocks = "\n\n".join([
-                f"  [상담 {i+1}]\n{conv}" for i, conv in enumerate(samples[:10])
+                f"  {L.tagging.conv_block_header.format(i=i+1)}\n{conv}"
+                for i, conv in enumerate(samples[:10])
             ])
         else:
             conv_blocks = "\n".join(samples[:10])
 
-        cluster_summaries.append(f"""
-[클러스터 {cluster_id}] (n={len(cluster_df)}건)
-{conv_blocks}
-""")
+        cluster_summaries.append(
+            f"\n{L.tagging.cluster_block_header.format(cluster_id=cluster_id, size=len(cluster_df))}\n{conv_blocks}\n"
+        )
 
     if len(cluster_summaries) == 0:
         return pd.DataFrame(empty_cluster_tags)
 
     all_clusters_text = "\n".join(cluster_summaries)
 
-    prompt = f"""다음은 고객 상담 데이터를 클러스터링한 결과입니다. 각 클러스터에는 {source_label}가 포함되어 있습니다.
-
-{all_clusters_text}
-
-당신의 임무:
-1. 전체 클러스터를 분석하여 이 데이터셋의 특성(업종, 문의 유형)을 파악하세요
-2. 데이터에 적합한 카테고리 체계를 생성하세요 (5-10개 정도)
-3. 각 클러스터를 일관되게 분류하세요
-
-요구사항:
-- 카테고리는 상호 배타적이고 전체를 포괄해야 함
-- 클러스터 간 비교하며 일관된 기준으로 분류
-- "기타"는 최소화 (정말 분류 불가능한 경우만)
-- 라벨은 간결하게 3-8자
-
-다음 형식의 JSON 배열로 응답:
-[
-  {{
-    "cluster_id": 0,
-    "cluster_size": 100,
-    "label": "배송 지연 문의",
-    "category": "배송",
-    "keywords": ["배송", "지연", "조회"]
-  }},
-  ...
-]
-
-JSON만 출력하세요 (추가 설명 없이)."""
+    prompt = L.tagging.agent_prompt.format(
+        source_label=source_label,
+        all_clusters_text=all_clusters_text,
+    )
 
     try:
         temp = LLM_TEMPERATURE if LLM_TEMPERATURE is not None else 0.0
@@ -252,5 +225,5 @@ JSON만 출력하세요 (추가 설명 없이)."""
         return tags_df
 
     except Exception as e:
-        print(f"\n⚠️  Agent 태깅 실패 (에러: {e}), API 방식으로 폴백...")
+        print(f"\n⚠️  {L.tagging.agent_fallback_log.format(error=e)}")
         return _tag_with_api(df, df_msg, llm_model, samples_per_cluster)

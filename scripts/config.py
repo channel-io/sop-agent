@@ -22,13 +22,13 @@ except ImportError:
 UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY")
 
 if not UPSTAGE_API_KEY:
-    raise ValueError(
-        "❌ UPSTAGE_API_KEY not found!\n\n"
-        "또는 직접 설정하려면:\n"
-        "  1. .env 파일 생성: cp .env.example .env\n"
-        "  2. .env 파일에 추가: UPSTAGE_API_KEY=up_your_key_here\n"
-        "  3. API 키 발급: https://console.upstage.ai/\n"
-    )
+    # Import lang_config lazily to avoid circular imports
+    try:
+        from scripts.lang_config import L
+        _msg = L.config.api_key_error
+    except Exception:
+        _msg = "❌ UPSTAGE_API_KEY not found!\nSet it in .env or via environment variable."
+    raise ValueError(_msg)
 
 UPSTAGE_BASE_URL = "https://api.upstage.ai/v1"
 
