@@ -1,6 +1,6 @@
 ---
 name: stage3-sop-generation
-description: This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Excel-to-SOP pipeline, performed entirely by the AI agent using natural language composition.  **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.  **Stage Flow:** - **Input**: Stage 2 extraction results (JSON files with patterns, FAQs, strategies) - **Process**: LLM composition of Agent SOP following standard format - **Output**: Agent SOP document (.sop.md) ready for deployment  **Key Capabilities:** - Generate Agent SOP in standardized format (RFC 2119 compliant) - Transform extracted patterns into parameterized workflows - Create constraint-based steps with MUST/SHOULD/MAY keywords - Include examples and troubleshooting sections - Ensure reusability across different customer support scenarios
+description: This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Userchat-to-SOP pipeline, performed entirely by the AI agent using natural language composition.  **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.  **Stage Flow:** - **Input**: Stage 2 extraction results (JSON files with patterns, FAQs, strategies) - **Process**: LLM composition of Agent SOP following standard format - **Output**: Agent SOP document (.sop.md) ready for deployment  **Key Capabilities:** - Generate Agent SOP in standardized format (RFC 2119 compliant) - Transform extracted patterns into parameterized workflows - Create constraint-based steps with MUST/SHOULD/MAY keywords - Include examples and troubleshooting sections - Ensure reusability across different customer support scenarios
 type: anthropic-skill
 version: "1.0"
 ---
@@ -8,7 +8,7 @@ version: "1.0"
 # Stage 3: Agent SOP Generation
 
 ## Overview
-This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Excel-to-SOP pipeline, performed entirely by the AI agent using natural language composition.
+This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Userchat-to-SOP pipeline, performed entirely by the AI agent using natural language composition.
 
 **Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
@@ -62,6 +62,10 @@ This SOP guides the generation of a production-ready Agent SOP document from ext
 Read all Stage 2 outputs to understand extracted patterns and strategies.
 
 **Constraints:**
+- You MUST read the SOP templates BEFORE generating any SOP file:
+  - `templates/HT_template.md`: HT SOP 구조 기준 (목적/주의사항/내용/톤앤매너/에스컬레이션)
+  - `templates/TS_template.md`: TS SOP 구조 기준 (목적/주의사항/문제해결프로세스/톤앤매너/에스컬레이션)
+  - 생성하는 모든 SOP는 반드시 이 템플릿 구조를 따라야 한다
 - You MUST read all JSON files from Stage 2:
   1. `patterns.json`: All patterns per cluster
   2. `faq.json`: FAQ pairs
@@ -78,7 +82,9 @@ Read all Stage 2 outputs to understand extracted patterns and strategies.
   - Read 10 sample conversations per cluster for realistic examples
 - You MUST verify JSON structure is valid
 - You MUST generate SOP for EVERY cluster in patterns.json (do NOT select only "representative" clusters)
-- You MUST create one SOP file per cluster (total = number of clusters)
+- You MUST read `sop_split_recommendation` per cluster to determine SOP count:
+  - `split: false` → 클러스터당 1개 SOP 생성
+  - `split: true`  → 클러스터당 2개 SOP 생성 (HT SOP + TS SOP 각각)
 - You SHOULD identify which patterns will become SOP steps
 - You SHOULD group related patterns for workflow design
 - You MAY skip low-frequency patterns within a cluster (< 2% of cluster), but NOT the cluster itself
@@ -110,12 +116,30 @@ Read results/{company}/02_extraction/patterns_enriched.json  # 샘플 이미 포
 
 Plan the Agent SOP structure based on extracted patterns.
 
+**SOP Split Decision (clusters당 반드시 확인):**
+
+각 클러스터의 `sop_split_recommendation`을 읽고 아래 분기를 따른다:
+
+```
+split: false → 단일 SOP
+  - sops[0].type에 따라 HT 또는 TS 템플릿 사용
+  - 파일명: {HT|TS}_{suggested_title}.sop.md
+  - 포함 패턴: sops[0].patterns 전체
+  - TS 소수 패턴은 해결이 안 되면 섹션에 에스컬레이션으로 처리
+
+split: true → 2개 SOP 생성
+  - HT SOP: sops[?type=="HT"].patterns 기반, HT 템플릿 사용
+    파일명: HT_{suggested_title}.sop.md
+  - TS SOP: sops[?type=="TS"].patterns 기반, TS 템플릿 사용
+    파일명: TS_{suggested_title}.sop.md
+  - 두 SOP 모두 상단에 Related SOP 링크 추가
+```
+
 **Constraints:**
-- You MUST follow the Agent SOP format standard (see `rules/agent-sop-format.md`)
-- You MUST include sections: Overview, Parameters, Steps, Examples
-- You SHOULD include Troubleshooting section if multiple failure modes exist
-- You SHOULD design Parameters that cover all major inquiry types
-- You MAY merge similar patterns into single parameterized Steps
+- You MUST follow `templates/HT_template.md` for HT SOPs and `templates/TS_template.md` for TS SOPs (Step 1에서 반드시 읽었어야 함)
+- You MUST NOT use Overview/Parameters/Steps/Examples 구조 — 템플릿에 없는 섹션은 추가하지 말 것
+- You SHOULD include all sections defined in the template (목적, 주의사항, 내용/문제해결프로세스, 톤앤매너, 에스컬레이션, 관련SOP)
+- You MAY merge similar patterns into single케이스 under 해결책 안내
 - You MUST ensure Steps flow logically (inquiry → analysis → response)
 
 **SOP Structure Template:**
@@ -679,7 +703,10 @@ Document common issues and failure modes.
 Write the complete SOP to a markdown file.
 
 **Constraints:**
-- You MUST save as `{company}_support.sop.md`
+- You MUST use `sop_split_recommendation.sops[].suggested_title`로 파일명 결정:
+  - HT SOP: `HT_{suggested_title}.sop.md`
+  - TS SOP: `TS_{suggested_title}.sop.md`
+  - split: false 단일 SOP도 동일 규칙 적용 (e.g., `HT_보풀제거기_가이드.sop.md`)
 - You MUST use `.sop.md` extension (Agent SOP convention)
 - You MUST include all required sections (Overview, Parameters, Steps)
 - You SHOULD validate RFC 2119 keyword usage (MUST, SHOULD, MAY)

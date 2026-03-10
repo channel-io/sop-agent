@@ -462,7 +462,7 @@ Agent:
 
 - **Detailed Clustering Guide**: `../docs/clustering-guide.md` - Algorithm details, troubleshooting, and optimization
 - **Next Stage**: `/stage2-extraction` - Pattern extraction workflow
-- **Full Pipeline**: `/excel-to-sop-pipeline` - End-to-end orchestration
+- **Full Pipeline**: `/userchat-to-sop-pipeline` - End-to-end orchestration
 
 ## Notes
 
