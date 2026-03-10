@@ -39,6 +39,10 @@ Output: Ready-to-deploy Agent SOP + Visual Flowcharts
 ## Parameters
 
 ### Required Parameters
+- **language** (default: "ko"): Output language for clustering labels and LLM prompts
+  - `"ko"`: Korean (한국어)
+  - `"ja"`: Japanese (日本語)
+
 - **mode** (default: "standard"): Pipeline execution mode - controls analysis depth across ALL stages
   - `"quick"`: Fast pipeline, skips reports, same sample size (~12-15 min)
     - Stage 1: Skip analysis_report.md
@@ -99,6 +103,8 @@ Note: Stage 4 (Flowchart Generation)은 기본적으로 활성화되어 있으�
 Validate environment and prepare for execution.
 
 **Actions:**
+- Ask user to select language (Korean / Japanese) using AskUserQuestion if not already specified
+- Set `language` variable (`"ko"` or `"ja"`) — all subsequent Python script executions MUST be prefixed with `LANGUAGE={language}`
 - Validate Python clustering package is installed
 - Check .env file with UPSTAGE_API_KEY
 - Print pipeline configuration
