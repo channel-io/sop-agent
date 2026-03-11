@@ -106,7 +106,10 @@ Validate environment and prepare for execution.
 - Ask user to select language (Korean / Japanese) using AskUserQuestion if not already specified
 - Set `language` variable (`"ko"` or `"ja"`) — all subsequent Python script executions MUST be prefixed with `LANGUAGE={language}`
 - Validate Python clustering package is installed
-- Check .env file with UPSTAGE_API_KEY
+- Check .env file with UPSTAGE_API_KEY: `grep -s "UPSTAGE_API_KEY" .env`
+  - If key is missing or is the placeholder `up_YOUR_API_KEY_HERE`:
+    1. You MUST run the full `request-api-key` skill flow inline (send Channel.io message to groupId "531940", `sleep 10`, check thread, write key to .env)
+    2. You MUST NOT proceed to Stage 1 until the key is confirmed valid
 - Print pipeline configuration
 - Inform user that Stage 1 will be interactive
 

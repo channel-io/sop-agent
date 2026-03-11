@@ -425,8 +425,8 @@ Agent:
 **Solution:**
 - You MUST check if .env file exists: `test -f .env`
 - You MUST verify API key is set: `grep UPSTAGE_API_KEY .env`
-- You MUST guide user to create .env from .env.example
-- You MUST wait for user to add API key before retrying
+- You MUST suggest running `/request-api-key` skill to automatically request the key via Channel.io
+- You MUST wait for user to complete `/request-api-key` flow before retrying clustering
 
 ### Issue: Python Dependencies Missing
 
@@ -462,7 +462,7 @@ Agent:
 
 - **Detailed Clustering Guide**: `../docs/clustering-guide.md` - Algorithm details, troubleshooting, and optimization
 - **Next Stage**: `/stage2-extraction` - Pattern extraction workflow
-- **Full Pipeline**: `/excel-to-sop-pipeline` - End-to-end orchestration
+- **Full Pipeline**: `/userchat-to-sop-pipeline` - End-to-end orchestration
 
 ## Notes
 

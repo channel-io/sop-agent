@@ -1,6 +1,6 @@
 ---
 name: stage2-extraction
-description: This SOP guides the real sample-based LLM extraction of patterns, FAQs, and response strategies from clustered customer support data. This is Stage 2 of the Excel-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
+description: This SOP guides the real sample-based LLM extraction of patterns, FAQs, and response strategies from clustered customer support data. This is Stage 2 of the Userchat-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
 type: anthropic-skill
 version: "1.0"
 ---
@@ -8,7 +8,7 @@ version: "1.0"
 # Stage 2: Pattern & FAQ Extraction
 
 ## Overview
-This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and response strategies from clustered customer support data. This is **Stage 2** of the Excel-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis.
+This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and response strategies from clustered customer support data. This is **Stage 2** of the Userchat-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis.
 
 **Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 

@@ -8,7 +8,7 @@ version: "1.0"
 # Stage 4: Flowchart Generation
 
 ## Overview
-This SOP guides the automatic generation of Mermaid flowcharts from SOP documents created in Stage 3. This is **Stage 4** (optional enhancement stage) of the Excel-to-SOP pipeline, performed by the AI agent using natural language analysis and Mermaid diagram generation.
+This SOP guides the automatic generation of Mermaid flowcharts from SOP documents created in Stage 3. This is **Stage 4** (optional enhancement stage) of the Userchat-to-SOP pipeline, performed by the AI agent using natural language analysis and Mermaid diagram generation.
 
 **Language:** Detect the language from the user's first message and respond in that language throughout. Support Korean (한국어) and Japanese (日本語). Default to Korean if language is unclear.
 
@@ -134,8 +134,8 @@ This template defines the official color scheme (`classDef`), node shapes, namin
   classDef apiClass     fill:#fff0c0,stroke:#e6a817,stroke-width:2px,stroke-dasharray:5 5
   ```
 - Apply classes with `class NodeA,NodeB successClass` at the end of the diagram
-- Node shapes: `([...])` start/end, `{...}` decision, `[...]` process, `[[...]]` API 호출 노드
-- **API 호출 노드**: 외부 API를 실제로 호출하는 단계에 `[[API 이름<br>반환 필드 확인]]` 형태로 표현하고 `apiClass` 적용 (점선 노란 테두리)
+- Node shapes: `([...])` start/end, `{...}` decision, `[...]` process, `[[...]]` API call nodes
+- **API call nodes**: Represent steps that actually call an external API as `[[API Name<br>Return field check]]` and apply `apiClass` (dashed yellow border)
 - No double-quotes inside node labels — use `<br/>` for line breaks
 - Keep node text ≤ 15 characters per line
 
@@ -213,9 +213,9 @@ flowchart TD
 - 데이터: {N}건 ({%}%)
 ```
 
-**케이스별 설명에 자동화 정보 필수 포함:**
-- 각 케이스 설명에 **자동화 가능**: X% 와 사용 기술(RAG/Action/Rules) 을 반드시 기재
-- 이 정보는 Stage 5 Sales Report의 관여율/해결율 산출 근거로 활용됨
+**Automation info MUST be included in each case description:**
+- Each case MUST include **Automatable**: X% and the technique used (RAG/Action/Rules)
+- This data is used as the basis for ALF participation/resolution rate calculation in Stage 5
 
 **Expected Duration:** 1-2 minutes per SOP
 
@@ -341,44 +341,44 @@ target_sops: all
 
 ## Related Documentation
 
-- **Flowchart Template** ⭐: [FLOWCHART_template.md](../../../templates/FLOWCHART_template.md) — 반드시 이 템플릿을 기준으로 생성
+- **Flowchart Template** ⭐: [FLOWCHART_template.md](../../../templates/FLOWCHART_template.md) — MUST use this template as the basis for all flowchart generation
 - **Stage 3 SOP Generation**: [stage3-sop-generation.sop.md](../../../agent-sops/stage3-sop-generation.sop.md)
-- **Full Pipeline**: [excel-to-sop-pipeline.sop.md](../../../agent-sops/excel-to-sop-pipeline.sop.md)
+- **Full Pipeline**: [userchat-to-sop-pipeline.sop.md](../../../agent-sops/userchat-to-sop-pipeline.sop.md)
 - **Mermaid Documentation**: https://mermaid.js.org/
 
 ## Notes
 
 ### When to Use Stage 4
 
-**추천 상황**:
-- 복잡한 Troubleshooting SOP (5개 이상 케이스, 의사결정 분기 많음)
-- 다단계 How-To SOP (순차적 프로세스 시각화 필요)
-- 신입 교육용 자료 필요
-- 프로세스 검토 및 최적화
-- 고객사 프레젠테이션
+**Recommended situations**:
+- Complex Troubleshooting SOPs (5+ cases, many decision branches)
+- Multi-step How-To SOPs (need to visualize sequential processes)
+- Onboarding materials for new staff
+- Process review and optimization
+- Customer presentations
 
-**생략 가능 상황**:
-- 매우 간단한 SOP (3단계 이하)
-- 텍스트 SOP만으로 충분
-- 시간 제약
+**Can be skipped when**:
+- Very simple SOPs (3 steps or fewer)
+- Text-based SOP is sufficient
+- Time constraints
 
-**TS vs HT 플로우차트 특징**:
-- **TS**: 의사결정 트리, 조건 분기, 에스컬레이션 경로 강조
-- **HT**: 순차적 단계, 체크포인트, 병렬 작업 흐름 강조
+**TS vs HT flowchart characteristics**:
+- **TS**: Emphasizes decision trees, conditional branches, escalation paths
+- **HT**: Emphasizes sequential steps, checkpoints, parallel task flows
 
 ### Flowchart Quality Criteria
 
 **Good Flowchart**:
-- ✅ 한 화면에 전체 프로세스 표시
-- ✅ 색상으로 케이스 구분 명확
-- ✅ 의사결정 포인트 명확
-- ✅ 에스컬레이션 경로 표시
+- ✅ Entire process visible on one screen
+- ✅ Cases clearly distinguished by color
+- ✅ Decision points are clear
+- ✅ Escalation paths are shown
 
 **Bad Flowchart**:
-- ❌ 너무 많은 노드 (50개 이상)
-- ❌ 화살표 교차 많음
-- ❌ 텍스트 너무 김 (노드 안)
-- ❌ 색상 없이 흑백만
+- ❌ Too many nodes (50+)
+- ❌ Too many crossing arrows
+- ❌ Node text too long
+- ❌ Monochrome with no color coding
 
 ---
 
