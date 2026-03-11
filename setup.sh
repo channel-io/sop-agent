@@ -11,9 +11,50 @@ echo ""
 # Python 버전 확인
 echo "[1/4] Python 확인 중..."
 if ! command -v python3 &>/dev/null; then
-  echo "  ❌ Python 3이 설치되어 있지 않습니다."
-  echo "  https://www.python.org/downloads/ 에서 Python 3.9 이상을 설치해주세요."
-  exit 1
+  echo "  ⚠️  Python 3이 설치되어 있지 않습니다."
+  echo ""
+  echo "  자동 설치를 시도합니다 (pyenv 사용, Homebrew 불필요)..."
+  echo ""
+
+  if command -v brew &>/dev/null; then
+    # Homebrew가 있으면 brew로 설치 (빠름)
+    echo "  🍺 Homebrew 감지 → brew install python3 실행 중..."
+    brew install python3
+  else
+    # Homebrew 없으면 pyenv로 설치
+    if ! command -v pyenv &>/dev/null; then
+      echo "  📦 pyenv 설치 중..."
+      curl -fsSL https://pyenv.run | bash
+
+      SHELL_RC="$HOME/.zshrc"
+      [ -f "$HOME/.bashrc" ] && SHELL_RC="$HOME/.bashrc"
+
+      echo '' >> "$SHELL_RC"
+      echo '# pyenv' >> "$SHELL_RC"
+      echo 'export PYENV_ROOT="$HOME/.pyenv"' >> "$SHELL_RC"
+      echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> "$SHELL_RC"
+      echo 'eval "$(pyenv init -)"' >> "$SHELL_RC"
+
+      export PYENV_ROOT="$HOME/.pyenv"
+      export PATH="$PYENV_ROOT/bin:$PATH"
+      eval "$(pyenv init -)"
+    fi
+
+    echo "  🐍 Python 3.11 설치 중... (몇 분 소요될 수 있습니다)"
+    pyenv install 3.11.9
+    pyenv global 3.11.9
+  fi
+
+  # 설치 재확인
+  if ! command -v python3 &>/dev/null; then
+    echo ""
+    echo "  ❌ 자동 설치에 실패했습니다."
+    echo "  아래 링크에서 직접 설치 후 다시 실행해주세요:"
+    echo "  👉 https://www.python.org/downloads/"
+    exit 1
+  fi
+
+  echo "  ✅ Python 설치 완료"
 fi
 
 PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
@@ -44,7 +85,12 @@ echo ""
 echo "[3/4] 패키지 설치 중..."
 pip install --upgrade pip -q
 pip install -r requirements.txt -q
-echo "  ✅ 패키지 설치 완료"
+echo "  ✅ 기본 패키지 설치 완료"
+
+# matplotlib 설치 (히트맵 생성용)
+echo "  matplotlib 설치 중... (히트맵 생성에 필요)"
+pip install matplotlib -q
+echo "  ✅ matplotlib 설치 완료"
 
 # .env 파일 설정
 echo ""
