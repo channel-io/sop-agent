@@ -16,8 +16,10 @@ def load_data(filepath, sample_size=None):
         - 형식 일관성 향상 (first_msg_short 최소화)
     """
     print(f"   Excel 로딩 중... ({filepath})")
-    df_chat = pd.read_excel(filepath, sheet_name='UserChat data')
-    df_msg = pd.read_excel(filepath, sheet_name='Message data')
+    xl = pd.ExcelFile(filepath)
+    chat_sheet = 'UserChat data' if 'UserChat data' in xl.sheet_names else 'UserChat'
+    df_chat = pd.read_excel(xl, sheet_name=chat_sheet)
+    df_msg = pd.read_excel(xl, sheet_name='Message data')
 
     print(f"   원본: UserChat {len(df_chat):,}건, Message {len(df_msg):,}건")
 
