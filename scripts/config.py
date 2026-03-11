@@ -27,7 +27,7 @@ if not UPSTAGE_API_KEY:
         from scripts.lang_config import L
         _msg = L.config.api_key_error
     except Exception:
-        _msg = "❌ UPSTAGE_API_KEY not found!\nSet it in .env or via environment variable."
+        _msg = "❌ UPSTAGE_API_KEY not found!\n\n💡 Claude Code에서 /request-api-key 를 실행하면\n   Channel.io로 API 키를 자동으로 요청할 수 있습니다."
     raise ValueError(_msg)
 
 UPSTAGE_BASE_URL = "https://api.upstage.ai/v1"
