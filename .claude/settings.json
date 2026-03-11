@@ -27,7 +27,10 @@
       "WebSearch",
       "Read",
       "Write",
-      "Edit"
+      "Edit",
+      "mcp__team-chat-mcp__send_team_chat_message",
+      "mcp__team-chat-mcp__get_team_chat_thread",
+      "mcp__team-chat-mcp__get_team_chat_messages"
     ]
   }
 }
