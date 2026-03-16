@@ -1,8 +1,6 @@
 ---
 name: stage1-clustering
 description: This sop executes automated clustering and tagging of customer support chat data through a Python pipeline, producing clustered data, cluster tags, and a comprehensive analysis report for Stage 2 (Pattern Extraction). The agent orchestrates the Python clustering script, monitors execution, validates outputs, and generates an analysis report to guide subsequent extraction work.  **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
-type: anthropic-skill
-version: "1.0"
 ---
 
 # Stage 1: Customer Support Chat Clustering
@@ -18,7 +16,7 @@ This sop executes automated clustering and tagging of customer support chat data
 - **input_file** (required): Path to Excel file containing UserChat data with "UserChat data" and "Message data" sheets
 - **output_dir** (required): Output directory path where results will be saved
 - **company** (required): Company name for analysis context and file naming
-- **sample_size** (optional, default: 1000): Number of records to process - use 1000 for standard analysis or "all" for complete dataset (only if explicitly needed)
+- **sample_size** (optional, default: 3000): Number of records to process - use up to 3000 by default, or "all" for complete dataset
 - **tagging_mode** (optional, default: "agent"): Cluster tagging method:
   - "agent": Solar-pro unified tagging (5-15 sec, industry-adaptive, recommended)
   - "api": Solar-mini independent tagging (30 sec, basic quality)
@@ -26,44 +24,15 @@ This sop executes automated clustering and tagging of customer support chat data
 - **k** (optional, default: "auto"): Number of clusters - use "auto" for optimal selection or integer for fixed count
 - **k_range** (optional, default: "8,10,12,15,20,25"): K values to test when k="auto"
 - **cache_dir** (optional, default: "cache"): Embedding cache directory
-- **mode** (optional, default: "standard"): Analysis depth mode
-  - "quick": Fast analysis, same sample size as standard but skips analysis_report.md generation
-  - "standard": Balanced analysis with full reports (default)
-  - "deep": Thorough analysis with increased sample size and extended k_range
-
 **Constraints for parameter acquisition:**
-- You MUST use AskUserQuestion tool to gather parameters with selectable options
-- You MUST scan data/ directory and provide available Excel files as options for input_file
-- You MUST suggest common output directories (e.g., results/company_name) as options
-- You MUST extract company name from filename and provide as default option
-- You MUST communicate with the user in the detected language throughout the entire workflow
-- You MUST use tagging_mode="agent" as default (Solar-pro unified tagging, do NOT ask about tagging mode)
+- You MUST scan data/ directory for Excel files and auto-select if only one exists
+- You MUST extract company name from filename (e.g., "user_chat_assacom.xlsx" → "assacom")
+- You MUST auto-set output_dir to `results/{company}` unless user specifies otherwise
+- You MUST use tagging_mode="agent" always (Solar-pro unified tagging)
 - You MUST validate that selected input_file exists and has correct Excel format
 - You MUST create output_dir if it doesn't exist
-- You SHOULD provide 2-4 options for each parameter when possible
-- You MAY allow "Other" option for custom input
-
-## Mode Behavior
-
-Apply these patterns throughout all steps based on the selected mode:
-
-**Quick Mode:**
-- Use same sample_size as standard (default: 1000)
-- Skip analysis_report.md generation (Step 4) for faster completion
-- Time saved: ~2-3 minutes
-
-**Standard Mode (Default):**
-- Use default sample_size (1000) and k_range (8,10,12,15,20,25)
-- Execute all steps including full analysis_report.md
-- Balanced speed and thoroughness
-- Recommended for most use cases
-
-**Deep Mode:**
-- Use larger sample_size (recommend: 3000+)
-- Extended k_range (8,10,12,15,20,25,30,35) for better cluster optimization
-- Generate comprehensive analysis_report.md with additional insights
-- More thorough pattern identification
-- Time cost: +5-10 minutes
+- You MUST NOT ask the user about mode, tagging_mode, or other optional parameters — use defaults
+- You SHOULD only ask the user to confirm input_file and company name if ambiguous (multiple files)
 
 ## Steps
 
@@ -79,10 +48,6 @@ Scan available files and gather parameters through interactive selection.
 - You MUST verify .env file exists: `test -f .env`
 - You MUST create output subdirectory: `mkdir -p {output_dir}/01_classification`
 - You MUST NOT proceed if input validation fails
-- You MUST adjust parameters based on mode:
-  - **Quick**: sample_size=1000 (default), k_range=default
-  - **Standard**: sample_size=1000 (default), k_range=default
-  - **Deep**: sample_size="all" (or 5000+), k_range="8,10,12,15,20,25,30,35"
 - Note: Python dependencies are validated automatically when script runs
 - You SHOULD display file size for selected file
 - You MAY provide custom path option in addition to scanned files
@@ -143,7 +108,6 @@ Run the Python clustering script with Solar-pro agent tagging and monitor execut
 - You SHOULD estimate time remaining based on sample size
 - You MAY offer to retry with different parameters if clustering fails
 
-> 💬 See [Mode Behavior](#mode-behavior) for mode-specific interaction guidance
 
 **Expected Outputs:**
 ```
@@ -202,7 +166,6 @@ Validate output files with tags and check data quality.
 - You SHOULD flag any quality concerns
 - You MAY suggest re-running with different parameters if quality is poor
 
-> 💬 See [Mode Behavior](#mode-behavior) for mode-specific interaction guidance
 
 **Quality Checklist:**
 - [ ] Both Excel files generated successfully
@@ -231,11 +194,6 @@ Validate output files with tags and check data quality.
 
 Create comprehensive analysis report for Stage 2 guidance.
 
-**Mode-Specific Behavior:**
-- **Quick Mode**: SKIP this step entirely. Proceed directly to Step 5 with brief summary only.
-- **Standard Mode**: Generate standard analysis_report.md as described below.
-- **Deep Mode**: Generate enhanced analysis_report.md with additional insights and larger sample extractions.
-
 **Constraints:**
 - You MUST read both output Excel files to gather statistics
 - You MUST create analysis report at: `{output_dir}/01_classification/analysis_report.md`
@@ -252,7 +210,6 @@ Create comprehensive analysis report for Stage 2 guidance.
 - You SHOULD identify patterns and trends in the data
 - You MAY include visualization suggestions
 
-> 💬 See [Mode Behavior](#mode-behavior) for mode-specific interaction guidance
 
 **Report Structure:**
 ```markdown
@@ -333,7 +290,6 @@ Present results and confirm readiness for Stage 2.
 - You SHOULD suggest next actions based on results
 - You MAY offer to re-run clustering with adjusted parameters if quality is suboptimal
 
-> 💬 See [Mode Behavior](#mode-behavior) for mode-specific interaction guidance
 
 **Communication Template:**
 ```
@@ -363,33 +319,25 @@ Present results and confirm readiness for Stage 2.
 
 ## Examples
 
-### Example 1: Quick Prototype (1000 records, agent tagging)
+### Example 1: Default Run (1000 records)
 
 **Input Parameters:**
 ```
 input_file: data/raw/user_chat_assacom.xlsx
-output_dir: results/assacom_test
+output_dir: results/assacom
 company: assacom
 sample_size: 1000
 tagging_mode: agent
 k: auto
-mode: auto
 ```
-
-**Execution:**
-Agent autonomously:
-1. Validates inputs
-2. Runs clustering (5 min)
-3. Generates analysis report
-4. Presents results
 
 **Results:**
 - 20 clusters identified
 - Silhouette: 0.064
 - Top issue: AS문의 (33.8%)
-- Time: ~2-3 minutes total
+- Time: ~2-3 minutes
 
-### Example 2: Production Run (Full dataset, interactive)
+### Example 2: Full Dataset Run
 
 **Input Parameters:**
 ```
@@ -398,23 +346,14 @@ output_dir: results/meliens
 company: meliens
 sample_size: all
 tagging_mode: agent
-k: 10
-mode: interactive
+k: auto
 ```
-
-**Execution:**
-Agent:
-1. Validates inputs (asks confirmation)
-2. Shows clustering command (asks to proceed)
-3. Displays progress (pauses for review)
-4. Generates report (shows preview, asks to save)
-5. Asks if user wants to proceed to Stage 2
 
 **Results:**
 - 10 clusters, 1,645 records
 - Silhouette: 0.132
 - A/S inquiries dominate (48%)
-- User reviews and approves before Stage 2
+- Time: ~10-15 minutes
 
 ## Troubleshooting
 

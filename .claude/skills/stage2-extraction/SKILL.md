@@ -1,8 +1,6 @@
 ---
 name: stage2-extraction
 description: This SOP guides the real sample-based LLM extraction of patterns, FAQs, and response strategies from clustered customer support data. This is Stage 2 of the Userchat-to-SOP pipeline, combining Python sample extraction with AI agent natural language analysis. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
-type: anthropic-skill
-version: "1.0"
 ---
 
 # Stage 2: Pattern & FAQ Extraction
@@ -46,11 +44,6 @@ This SOP guides the **real sample-based LLM extraction** of patterns, FAQs, and 
   - Used to understand industry and customer domain
 
 ### Optional
-- **mode** (default: "standard"): Analysis depth mode
-  - `"quick"`: Fast extraction, n_samples=20, skips extraction_summary.md generation
-  - `"standard"`: Balanced analysis, n_samples=20, full reports (default)
-  - `"deep"`: Thorough analysis, n_samples=30-50, comprehensive reports
-
 - **focus_clusters** (default: "all"): Which clusters to prioritize
   - `"all"`: Extract from all clusters
   - `"top_10"`: Extract from top 10 largest clusters
@@ -114,15 +107,8 @@ Key Insight: A/S inquiries dominate, need detailed response templates
 
 For each cluster, identify common patterns, inquiry types, and response needs by analyzing **actual customer messages**.
 
-**Mode-Specific Behavior:**
-- **Quick Mode**: Analyze 20 samples per cluster (same as standard)
-- **Standard Mode**: Analyze 20 samples per cluster (default)
-- **Deep Mode**: Analyze 30-50 samples per cluster for more comprehensive patterns
-
 **Constraints:**
-- You MUST adjust sample count based on mode:
-  - Quick/Standard: 20 samples per cluster
-  - Deep: 30-50 samples per cluster
+- You MUST analyze 20 samples per cluster
 - You MUST identify 3-8 distinct patterns within each cluster
 - You MUST extract actual customer phrases from samples (DO NOT paraphrase or guess!)
 - You MUST NOT infer or assume patterns based on cluster labels alone
@@ -525,22 +511,14 @@ Create a structured keyword taxonomy for search and categorization.
 
 Save all extracted data in structured JSON and/or Markdown format.
 
-**Mode-Specific Behavior:**
-- **Quick Mode**: Save core JSON files only (patterns, faq, response_strategies, keywords). SKIP extraction_summary.md generation.
-- **Standard Mode**: Save all JSON files + extraction_summary.md (default)
-- **Deep Mode**: Save all files + enhanced extraction_summary.md with deeper insights
-
 **Constraints:**
 - You MUST create output directory if it doesn't exist
-- You MUST save at least one output format (JSON recommended)
-- You MUST adjust outputs based on mode (see above)
+- You MUST save all JSON files + extraction_summary.md
 - You SHOULD include metadata (timestamp, source files, cluster count)
 - You MAY split output into multiple files for readability
 - You MUST NOT overwrite existing files without confirmation
 
-**Output Files (Mode-Dependent):**
-
-**All Modes Generate:**
+**Output Files:**
 1. **`patterns.json`**: All extracted patterns with HT/TS classification
 ```json
 {
@@ -621,8 +599,7 @@ Save all extracted data in structured JSON and/or Markdown format.
 }
 ```
 
-**Standard & Deep Modes Only:**
-5. **`extraction_summary.md`**: Human-readable summary (SKIPPED in Quick Mode)
+5. **`extraction_summary.md`**: Human-readable summary
 ```markdown
 # Stage 2 Extraction Summary: Meliens
 
@@ -672,25 +649,25 @@ Embed representative conversation samples into patterns.json for Stage 3 optimiz
 
 **Constraints:**
 - You MUST run this step after Step 6 (patterns.json saved)
-- You MUST use `enrich_patterns.py` Python script
-- You SHOULD select 10 representative conversations per cluster
+- You MUST use `enrich_patterns.py` Python script with `--n-samples 20`
 - You MUST include both sample conversations and tone-and-manner examples
-- You MAY skip this step if Stage 3 will read clustered.xlsx directly
+- Stage 3에서 반드시 이 파일을 사용한다 — clustered.xlsx 재로드 불필요
 
 **Execution:**
 ```bash
-# Run enrichment script
+# Run enrichment script (기본값 20건/클러스터)
 python3 scripts/enrich_patterns.py \
   --patterns results/{company}/02_extraction/patterns.json \
-  --messages results/{company}/{company}_messages.csv \
-  --output results/{company}/02_extraction/patterns_enriched.json
+  --messages results/{company}/01_classification/{company}_messages.csv \
+  --output results/{company}/02_extraction/patterns_enriched.json \
+  --n-samples 20
 ```
 
 **Sample Selection Strategy (from enrich_patterns.py)**:
-1. **Representative cases** (2-3개): 중간 길이 대화 (대표적 케이스)
-2. **Complex case** (1개): 가장 긴 대화 (15+ 메시지, 복잡한 상황)
-3. **Simple case** (1개): 가장 짧은 대화 (3+ 메시지, 간단한 문의)
-4. **Additional samples**: 나머지 샘플로 10개 채움
+1. **Simple case** (1개): 가장 짧은 대화 (3+ 턴, 간단한 케이스)
+2. **Complex case** (1개): 가장 긴 대화 (15+ 턴, 복잡한 케이스)
+3. **Representative cases** (3개): 중간 길이 대화 (median ± 1)
+4. **Additional samples** (나머지): 전체 대화에서 **균등 간격 샘플링**으로 20건 채움
 
 **Tone-and-Manner Extraction**:
 - 상담원 메시지 20개 추출
@@ -706,26 +683,22 @@ python3 scripts/enrich_patterns.py \
 
 파일 크기:
   - 원본: 125.3 KB
-  - Enriched: 487.6 KB (3.9x)
+  - Enriched: 700-800 KB (~6x)
 
-출력 파일: results/assacom/02_extraction/patterns_enriched.json
+출력 파일: results/{company}/02_extraction/patterns_enriched.json
 ```
 
 **Quality Checks:**
 - [ ] patterns_enriched.json 생성 성공
-- [ ] 파일 크기 3-5배 증가 (샘플 포함으로 정상)
-- [ ] 각 클러스터에 sample_conversations 포함
+- [ ] 파일 크기 5-10배 증가 (20건 샘플 포함으로 정상)
+- [ ] 각 클러스터에 sample_conversations 20건 포함
 - [ ] 각 클러스터에 tone_and_manner_samples 포함
 
 **Benefits for Stage 3:**
 - ✅ clustered.xlsx 재로드 불필요 (파일 의존성 단순화)
-- ✅ 샘플 선정 전략 일관성 (재현성 보장)
-- ✅ 약간의 속도 향상 (~8초/SOP)
+- ✅ 20건 실제 대화 원문으로 SOP 품질 대폭 향상
+- ✅ 실제 상담원 응답 문구를 SOP에 직접 반영 가능
 - ✅ 이식성 향상 (patterns_enriched.json 하나로 충분)
-
-**Note:**
-- Stage 3에서 patterns_enriched.json을 사용하도록 설정 필요
-- 또는 Stage 3가 clustered.xlsx를 계속 사용할 수도 있음 (enrich 선택적)
 
 ## Examples
 

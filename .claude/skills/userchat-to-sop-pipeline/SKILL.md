@@ -1,8 +1,6 @@
 ---
 name: userchat-to-sop-pipeline
 description: Complete end-to-end pipeline for transforming Excel customer support data into production-ready Agent SOP documents and flowcharts through Clustering, Pattern Extraction, SOP Generation, and Flowchart Generation stages.
-type: anthropic-skill
-version: "1.0"
 ---
 
 # Userchat-to-SOP Complete Pipeline
@@ -31,10 +29,7 @@ Stage 4: Flowchart Generation (LLM) [~4 min, (기본 활성화)]
 Output: Ready-to-deploy Agent SOP + Visual Flowcharts
 ```
 
-**Total Time**: 12-35 minutes (Stage 1-4 full pipeline, mode-dependent)
-- **Quick mode**: ~12-15 minutes (2 + 4 + 3 + 2) - Skips reports, same samples
-- **Standard mode**: ~16-22 minutes (3 + 7 + 5 + 4) - Balanced with full reports
-- **Deep mode**: ~25-35 minutes (8 + 12 + 7 + 5) - Increased samples and detail
+**Total Time**: ~20-30 minutes (Stage 1-4 full pipeline)
 
 ## Parameters
 
@@ -43,35 +38,16 @@ Output: Ready-to-deploy Agent SOP + Visual Flowcharts
   - `"ko"`: Korean (한국어)
   - `"ja"`: Japanese (日本語)
 
-- **mode** (default: "standard"): Pipeline execution mode - controls analysis depth across ALL stages
-  - `"quick"`: Fast pipeline, skips reports, same sample size (~12-15 min)
-    - Stage 1: Skip analysis_report.md
-    - Stage 2: Skip extraction_summary.md, n_samples=20
-    - Stage 3: Concise SOPs (~500 lines)
-    - Stage 4: Simple flowcharts (5-10 nodes)
-  - `"standard"`: Balanced pipeline with full reports (~16-22 min, default)
-    - Stage 1: Full analysis_report.md
-    - Stage 2: Full extraction_summary.md, n_samples=20
-    - Stage 3: Standard SOPs (~1000 lines)
-    - Stage 4: Standard flowcharts (15-30 nodes)
-  - `"deep"`: Thorough pipeline with increased samples (~25-35 min)
-    - Stage 1: Enhanced analysis with larger sample_size and extended k_range
-    - Stage 2: Deep extraction, n_samples=30-50
-    - Stage 3: Comprehensive SOPs (~2000 lines)
-    - Stage 4: Detailed flowcharts (30+ nodes)
-
-### Stage 1 Parameters (대화형 자동 수집)
-Stage 1은 `/stage1-clustering` 스킬을 호출하여 **대화형으로 파라미터를 수집**합니다.
-- `input_file`: 파일 선택 (AskUserQuestion)
+### Stage 1 Parameters (자동 수집)
+Stage 1은 `/stage1-clustering` 스킬을 호출하여 파라미터를 자동 수집합니다.
+- `input_file`: data/ 디렉토리에서 자동 감지 (파일 1개면 자동 선택)
 - `company`: 파일명에서 자동 추출
-- `output_dir`: 자동 제안 (results/{company})
-- `mode`에 따라 자동 설정:
-  - quick/standard: sample_size=1000, k_range=default
-  - deep: sample_size="all", k_range=extended
-- `tagging_mode`: 기본값 "agent" (조정 가능)
-- `k`: 기본값 "auto" (조정 가능)
+- `output_dir`: `results/{company}`로 자동 설정
+- `sample_size`: 기본값 3000 (데이터가 3000건 미만이면 전체)
+- `tagging_mode`: 기본값 "agent" (변경 불필요)
+- `k`: 기본값 "auto"
 
-**Note:** Stage 1 실행 시 대화형으로 파라미터를 선택하므로, Pipeline 실행 시 별도 입력이 필요하지 않습니다.
+**Note:** 파라미터를 묻지 않고 기본값으로 진행합니다. 파일이 여러 개일 때만 선택을 요청합니다.
 
 ---
 
@@ -131,32 +107,22 @@ Proceeding to Stage 1...
 
 ### 2. Execute Stage 1: Clustering
 
-Run clustering via `/stage1-clustering` skill with **interactive parameter selection** and mode-adjusted parameters.
+Run clustering via `/stage1-clustering` skill with auto-detected parameters.
 
 **Documentation**: See [stage1-clustering.sop.md](stage1-clustering.sop.md)
 
 **Execution:**
 ```bash
-# Execute Stage 1 skill with mode parameter
-/stage1-clustering mode={mode}
+# Execute Stage 1 skill
+/stage1-clustering
 
 # Stage 1 will:
-# 1. Scan data/ directory for Excel files
-# 2. Present file options via AskUserQuestion
-# 3. Extract company name from selected file
-# 4. Suggest output directory (e.g., results/{company})
-# 5. Adjust clustering parameters based on mode:
-#    - quick/standard: sample_size=1000, k_range=default
-#    - deep: sample_size="all", k_range=extended
-# 6. Run clustering with selected parameters
-# 7. Generate analysis report (skipped in quick mode)
+# 1. Scan data/ directory for Excel files (auto-select if single file)
+# 2. Extract company name from filename
+# 3. Set output_dir to results/{company}
+# 4. Run clustering with defaults (sample_size=3000, k=auto, tagging_mode=agent)
+# 5. Generate analysis report
 ```
-
-**User Interaction (대화형):**
-- 📁 File selection: Choose from scanned Excel files
-- 🏢 Company name: Confirm auto-extracted name
-- 📂 Output directory: Confirm suggested path
-- ⚙️ (Optional) Clustering parameters: sample_size, k, tagging_mode
 
 **Outputs (Auto-detected for next stages):**
 - `results/{company}/{company}_clustered.xlsx` - Full dataset with cluster assignments
@@ -199,22 +165,19 @@ company="{company}"                   # From Stage 1 output prefix
 
 ### 3. Execute Stage 2: Pattern Extraction
 
-Use LLM to extract patterns, FAQs, and response strategies from clusters with mode-adjusted depth.
+Use LLM to extract patterns, FAQs, and response strategies from clusters.
 
 **Documentation**: See [stage2-extraction.sop.md](stage2-extraction.sop.md)
 
 **Execution:**
 ```bash
-# In Claude Code, execute with mode:
-/stage2-extraction mode={mode}
+# In Claude Code:
+/stage2-extraction
 
-# With parameters (auto-detected from Stage 1):
-# - clustering_output_dir: $output_base_dir  # From Stage 1
-# - company: $company                         # From Stage 1
-# - mode: quick/standard/deep (from pipeline parameter)
-#   - quick: n_samples=20, skip extraction_summary.md
-#   - standard: n_samples=20, full reports
-#   - deep: n_samples=30-50, enhanced reports
+# Parameters (auto-detected from Stage 1):
+# - clustering_output_dir: $output_base_dir
+# - company: $company
+# - n_samples_per_cluster: 20
 ```
 
 **Inputs:**
@@ -225,12 +188,9 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters with mo
 - `faq.json` - FAQ pairs for common inquiries
 - `response_strategies.json` - Response strategies and escalation rules
 - `keywords.json` - Keyword taxonomy
-- `extraction_summary.md` - Summary and recommendations (skipped in quick mode)
+- `extraction_summary.md` - Summary and recommendations
 
-**Expected Duration (Mode-Dependent):**
-- **Quick**: ~4-6 minutes (20 samples, no summary report)
-- **Standard**: ~5-10 minutes (20 samples, full reports)
-- **Deep**: ~12-18 minutes (30-50 samples, enhanced reports)
+**Expected Duration**: ~5-10 minutes
 
 **Quality Checks:**
 - [ ] All JSON files generated and valid
@@ -255,41 +215,33 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters with mo
 
 ### 4. Execute Stage 3: SOP Generation
 
-Use LLM to generate final Agent SOP document from extracted patterns with mode-adjusted detail level.
+Use LLM to generate Agent SOP documents from extracted patterns, organized by customer journey stages.
 
 **Documentation**: See [stage3-sop-generation.sop.md](stage3-sop-generation.sop.md)
 
 **Execution:**
 ```bash
-# In Claude Code, execute with mode:
-/stage3-sop-generation mode={mode}
+# In Claude Code:
+/stage3-sop-generation
 
-# With parameters:
+# Parameters (auto-detected from Stage 2):
 # - extraction_output_dir: $output_base_dir/02_extraction
 # - company: $company
-# - sop_title: "${company} Customer Support Assistant"
-# - mode: quick/standard/deep (from pipeline parameter)
-#   - quick: Concise SOPs (~500 lines), 1-2 examples
-#   - standard: Balanced SOPs (~1000 lines), 2-3 examples
-#   - deep: Comprehensive SOPs (~2000 lines), 4-5 examples
 ```
 
 **Inputs:**
-- Stage 2 outputs: `patterns.json`, `faq.json`, `response_strategies.json`, `keywords.json`
+- Stage 2 outputs: `patterns_enriched.json`, `faq.json`, `response_strategies.json`, `keywords.json`
 
 **Outputs:**
-- `{company}_support.sop.md` - Complete Agent SOP document
+- `03_sop/HT_*.sop.md` - 10-15개 SOP 파일 (고객 여정 기반)
+- `03_sop/TS_*.sop.md`
 - `metadata.json` - SOP metadata
 
-**Expected Duration (Mode-Dependent):**
-- **Quick**: ~3-4 minutes (concise SOPs)
-- **Standard**: ~5-6 minutes (balanced SOPs)
-- **Deep**: ~7-10 minutes (comprehensive SOPs)
+**Expected Duration**: ~5-10 minutes
 
 **Quality Checks:**
 - [ ] Multiple SOP files generated (TS_*.sop.md, HT_*.sop.md)
-- [ ] All required sections present (Overview, Parameters, Steps, Examples)
-- [ ] RFC 2119 keywords used correctly
+- [ ] 템플릿 구조 준수 (목적, 주의사항, 내용/문제해결프로세스, 톤앤매너, 에스컬레이션)
 - [ ] Steps reference extracted patterns and FAQs
 - [ ] Examples are concrete and realistic
 - [ ] Troubleshooting section addresses common issues
@@ -311,23 +263,19 @@ Use LLM to generate final Agent SOP document from extracted patterns with mode-a
 
 ### 5. Execute Stage 4: Flowchart Generation (Required)
 
-Generate Mermaid flowcharts from SOP documents with mode-adjusted complexity.
+Generate Mermaid flowcharts from SOP documents.
 
 **Documentation**: See [stage4-flowchart-generation.sop.md](stage4-flowchart-generation.sop.md)
 
 **Execution:**
 ```bash
-# In Claude Code, execute with mode:
-/stage4-flowchart-generation mode={mode}
+# In Claude Code:
+/stage4-flowchart-generation
 
-# With parameters:
+# Parameters:
 # - sop_dir: $output_base_dir/03_sop
-# - target_sops: $flowchart_target (default: "all")
-# - output_format: "markdown" (SVG generation skipped by default)
-# - mode: quick/standard/deep (from pipeline parameter)
-#   - quick: Simple flowcharts (5-10 nodes)
-#   - standard: Balanced flowcharts (15-30 nodes)
-#   - deep: Detailed flowcharts (30+ nodes)
+# - target_sops: "all"
+# - output_format: "markdown"
 ```
 
 **Inputs:**
@@ -338,11 +286,7 @@ Generate Mermaid flowcharts from SOP documents with mode-adjusted complexity.
 - `*_flowchart.svg` - SVG images (optional, only if user has Mermaid CLI)
 - `flowchart_generation_summary.md` - Summary report
 
-**Expected Duration (Mode-Dependent):**
-- **Quick**: ~2-3 minutes (simple flowcharts)
-- **Standard**: ~3-4 minutes (balanced flowcharts)
-- **Deep**: ~5-7 minutes (detailed flowcharts)
-- With SVG conversion: +1-2 minutes (if Mermaid CLI installed)
+**Expected Duration**: ~3-5 minutes
 
 **Quality Checks:**
 - [ ] Flowchart markdown files generated for all target SOPs
@@ -706,43 +650,22 @@ Each stage is independent and can be resumed:
 
 **See `/stage2-extraction` skill for detailed execution strategy**
 
-### Pipeline Customization
+### Pipeline Defaults
 
-Choose configuration based on use case:
+기본 설정 (파라미터 질문 없이 바로 실행):
 
-**Quick Mode** (~12-15 min, Stage 1-4):
-- mode: "quick"
-- Stage 1: sample_size=1000, skip analysis_report.md
-- Stage 2: n_samples=20, skip extraction_summary.md
-- Stage 3: Concise SOPs (~500 lines)
-- Stage 4: Simple flowcharts (5-10 nodes)
-- generate_flowcharts: true
-- flowchart_target: "all" or "ts_only"
-- flowchart_format: "markdown"
+| Stage | 파라미터 | 기본값 |
+|-------|---------|--------|
+| Stage 1 | sample_size | 3000 |
+| Stage 1 | k_range | 8,10,12,15,20,25 |
+| Stage 1 | tagging_mode | agent |
+| Stage 2 | n_samples_per_cluster | 20 |
+| Stage 2.5 | --n-samples | 20 |
+| Stage 3 | SOP 구성 | 고객 여정 기반 ~10-15개 |
+| Stage 4 | flowchart_target | all |
+| Stage 4 | flowchart_format | markdown |
 
-**Standard Mode** (~16-22 min, Stage 1-4, 기본값):
-- mode: "standard"
-- Stage 1: sample_size=1000, full analysis_report.md
-- Stage 2: n_samples=20, full extraction_summary.md
-- Stage 3: Standard SOPs (~1000 lines)
-- Stage 4: Standard flowcharts (15-30 nodes)
-- generate_flowcharts: true
-- flowchart_target: "all"
-- flowchart_format: "markdown"
-
-**Deep Mode** (~25-35 min, Stage 1-4):
-- mode: "deep"
-- Stage 1: sample_size="all", enhanced analysis_report.md, extended k_range
-- Stage 2: n_samples=30-50, comprehensive extraction_summary.md
-- Stage 3: Comprehensive SOPs (~2000 lines)
-- Stage 4: Detailed flowcharts (30+ nodes)
-- generate_flowcharts: true
-- flowchart_target: "all"
-- flowchart_format: "markdown"
-
-**Legacy Mode (Stage 1-3 Only)** (~12-15 min):
-- mode: "standard"
-- generate_flowcharts: false  # Skip Stage 4
+Stage 4를 건너뛰려면 `generate_flowcharts=false`로 설정.
 
 ### Cost Estimates (per 1000 records)
 
