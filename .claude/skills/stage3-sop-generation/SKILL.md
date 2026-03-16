@@ -1,8 +1,6 @@
 ---
 name: stage3-sop-generation
 description: This SOP guides the generation of a production-ready Agent SOP document from extracted patterns and FAQs. This is **Stage 3** (final stage) of the Userchat-to-SOP pipeline, performed entirely by the AI agent using natural language composition.  **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.  **Stage Flow:** - **Input**: Stage 2 extraction results (JSON files with patterns, FAQs, strategies) - **Process**: LLM composition of Agent SOP following standard format - **Output**: Agent SOP document (.sop.md) ready for deployment  **Key Capabilities:** - Generate Agent SOP in standardized format (RFC 2119 compliant) - Transform extracted patterns into parameterized workflows - Create constraint-based steps with MUST/SHOULD/MAY keywords - Include examples and troubleshooting sections - Ensure reusability across different customer support scenarios
-type: anthropic-skill
-version: "1.0"
 ---
 
 # Stage 3: Agent SOP Generation
@@ -40,11 +38,6 @@ This SOP guides the generation of a production-ready Agent SOP document from ext
   - Should be descriptive and specific
 
 ### Optional
-- **mode** (default: "standard"): SOP generation depth mode
-  - `"quick"`: Concise SOP (~500 lines), all standard sections
-  - `"standard"`: Balanced SOP (~1000 lines), all standard sections (default)
-  - `"deep"`: Comprehensive SOP (~2000 lines), full detail with extensive examples
-
 - **sop_type** (default: "customer_support"): Type of SOP to generate
   - `"customer_support"`: General support agent SOP
   - `"troubleshooting"`: Technical troubleshooting focus
@@ -72,21 +65,17 @@ Read all Stage 2 outputs to understand extracted patterns and strategies.
   3. `response_strategies.json`: Response strategies and escalation rules
   4. `keywords.json`: Keyword taxonomy
   5. `extraction_summary.md`: Summary and automation opportunities
-- You SHOULD read enriched patterns if available (recommended):
-  6. `patterns_enriched.json`: Patterns with embedded conversation samples (from Stage 2 Step 7)
-  - Contains 10 representative conversations per cluster
+- You MUST read enriched patterns (required, not optional):
+  6. `patterns_enriched.json`: Patterns with **20 real conversation transcripts per cluster** (from Stage 2 Step 7)
+  - Contains 20 representative conversations per cluster (actual verbatim dialog)
   - Contains 20 tone-and-manner samples per cluster
-  - If this file exists, use it instead of clustered.xlsx
-- You MAY fallback to Stage 1 clustered data if patterns_enriched.json doesn't exist:
-  6b. `{company}_clustered.xlsx`: Full dataset with cluster assignments (from Stage 1 output)
-  - Read 10 sample conversations per cluster for realistic examples
+  - **Read the actual `turns` in each conversation** to extract real customer expressions, agent response templates, and specific troubleshooting steps
 - You MUST verify JSON structure is valid
-- You MUST generate SOP for EVERY cluster in patterns.json (do NOT select only "representative" clusters)
-- You MUST read `sop_split_recommendation` per cluster to determine SOP count:
-  - `split: false` → 클러스터당 1개 SOP 생성
-  - `split: true`  → 클러스터당 2개 SOP 생성 (HT SOP + TS SOP 각각)
+- You MUST NOT map SOPs 1:1 to clusters — organize by **customer journey stages** instead
+- You MUST identify cross-cluster patterns (e.g., "데이터 로밍 설정" appearing in multiple clusters → single dedicated SOP)
+- You SHOULD group related clusters into customer journey stages: 구매 전 → 구매/결제 → 설치 → 출국 전 → 현지 도착 → 현지 사용 → 기타
+- You SHOULD generate ~12 SOPs covering all clusters (not 1 SOP per cluster)
 - You SHOULD identify which patterns will become SOP steps
-- You SHOULD group related patterns for workflow design
 - You MAY skip low-frequency patterns within a cluster (< 2% of cluster), but NOT the cluster itself
 
 **Reading Process:**
@@ -114,33 +103,49 @@ Read results/{company}/02_extraction/patterns_enriched.json  # 샘플 이미 포
 
 ### 2. Design SOP Structure
 
-Plan the Agent SOP structure based on extracted patterns.
+Plan the Agent SOP structure based on extracted patterns, organized by **customer journey stages**.
 
-**SOP Split Decision (clusters당 반드시 확인):**
+**Customer Journey Mapping (필수):**
 
-각 클러스터의 `sop_split_recommendation`을 읽고 아래 분기를 따른다:
+클러스터를 1:1 매핑하지 말고, 고객 여정 7단계를 기준으로 SOP를 구성한다:
 
 ```
-split: false → 단일 SOP
-  - sops[0].type에 따라 HT 또는 TS 템플릿 사용
-  - 파일명: {HT|TS}_{suggested_title}.sop.md
-  - 포함 패턴: sops[0].patterns 전체
-  - TS 소수 패턴은 해결이 안 되면 섹션에 에스컬레이션으로 처리
+고객 여정 단계 (예시 — 회사/서비스에 맞게 조정):
+1. 구매 전       → 상품 정보, 요금제 문의
+2. 구매/결제     → 주문, 결제, 쿠폰
+3. 수령/설치     → 배송, 개통 방법
+4. 출국 전       → 준비 방법, 설정
+5. 현지 도착     → 초기 연결, 활성화
+6. 현지 사용     → 데이터, 통화, 트러블슈팅
+7. 기타          → 환불, 재발행, 계정 관련
+```
 
-split: true → 2개 SOP 생성
-  - HT SOP: sops[?type=="HT"].patterns 기반, HT 템플릿 사용
-    파일명: HT_{suggested_title}.sop.md
-  - TS SOP: sops[?type=="TS"].patterns 기반, TS 템플릿 사용
-    파일명: TS_{suggested_title}.sop.md
-  - 두 SOP 모두 상단에 Related SOP 링크 추가
+**SOP 설계 원칙:**
+1. 클러스터 → 여정 단계 매핑: 각 클러스터가 어느 여정 단계에 속하는지 판단
+2. 단계 내 여러 클러스터 통합: 유사한 클러스터는 하나의 SOP로 합침
+3. 혼합 클러스터 분리: 하나의 클러스터에 서로 다른 여정 단계가 섞여 있으면 분리
+4. 목표: 약 10-15개 SOP (1 클러스터 = 1 SOP가 되는 것을 피할 것)
+
+**SOP 파일명 규칙:**
+```
+HT_{여정단계}_{주제}.sop.md   → 정보 안내 중심
+TS_{여정단계}_{주제}.sop.md   → 문제 해결 중심
+
+예시:
+HT_구매후_바우처수신.sop.md
+HT_USIM배송_일반문의.sop.md
+TS_현지_데이터연결불량.sop.md
+TS_개통_활성화오류.sop.md
 ```
 
 **Constraints:**
 - You MUST follow `templates/HT_template.md` for HT SOPs and `templates/TS_template.md` for TS SOPs (Step 1에서 반드시 읽었어야 함)
 - You MUST NOT use Overview/Parameters/Steps/Examples 구조 — 템플릿에 없는 섹션은 추가하지 말 것
+- You MUST NOT create 1 SOP per cluster — always group by customer journey
 - You SHOULD include all sections defined in the template (목적, 주의사항, 내용/문제해결프로세스, 톤앤매너, 에스컬레이션, 관련SOP)
-- You MAY merge similar patterns into single케이스 under 해결책 안내
-- You MUST ensure Steps flow logically (inquiry → analysis → response)
+- You SHOULD add cross-references between related SOPs (Related SOP 섹션)
+- You MAY merge similar patterns into single 케이스 under 해결책 안내
+- You MUST ensure each SOP has a clear, single responsibility
 
 **SOP Structure Template:**
 ```markdown
@@ -197,15 +202,9 @@ split: true → 2개 SOP 생성
 
 Create a clear, concise overview of the SOP's purpose and capabilities.
 
-**Mode-Specific Behavior:**
-- **Quick Mode**: Brief overview (50-100 words), essential info only
-- **Standard Mode**: Standard overview (100-200 words) with key features
-- **Deep Mode**: Comprehensive overview (200-300 words) with detailed context and benefits
-
 **Constraints:**
 - You MUST describe what the SOP accomplishes
 - You MUST specify when to use this SOP
-- You MUST adjust length and detail based on mode
 - You SHOULD list key features or capabilities (3-5 bullets)
 - You SHOULD mention the company and industry context
 - You MAY include expected outcomes or benefits
@@ -574,17 +573,10 @@ Escalate to specialized teams when required.
 
 Write concrete usage examples demonstrating the SOP in action.
 
-**Mode-Specific Behavior:**
-- **Quick Mode**: 1-2 basic examples only
-- **Standard Mode**: 2-3 examples covering main scenarios (default)
-- **Deep Mode**: 4-5 examples including edge cases and anti-examples
-
 **Constraints:**
-- You MUST adjust example count based on mode
 - You MUST use realistic customer messages (from clustered.xlsx samples)
 - You SHOULD cover different inquiry types
 - You SHOULD show both simple and complex scenarios
-- You MAY include "anti-examples" (what NOT to do) in Deep Mode
 - You MUST format examples clearly with Input → Process → Output structure
 
 **Example Structure:**
@@ -653,14 +645,8 @@ Channel Corp. 고객센터
 
 Document common issues and failure modes.
 
-**Mode-Specific Behavior:**
-- **Quick Mode**: SKIP troubleshooting section or include 1-2 critical issues only
-- **Standard Mode**: Include 3-4 common issues with solutions (default)
-- **Deep Mode**: Comprehensive troubleshooting with 5+ issues, prevention tips, and external references
-
 **Constraints:**
-- You MUST adjust based on mode (see above)
-- You MUST include troubleshooting section in Standard/Deep modes if SOP has >3 potential failure points
+- You MUST include troubleshooting section if SOP has >3 potential failure points
 - You SHOULD document issues encountered during testing or known edge cases
 - You SHOULD provide clear solutions or workarounds
 - You MAY reference external documentation
@@ -698,35 +684,51 @@ Document common issues and failure modes.
 **Prevention**: Expand keyword taxonomy with more synonyms and variations
 ```
 
-### 8. Save Agent SOP Document
+### 8. Save Agent SOP Documents
 
-Write the complete SOP to a markdown file.
+Write all SOP files to the output directory. Each SOP is a separate file.
 
 **Constraints:**
-- You MUST use `sop_split_recommendation.sops[].suggested_title`로 파일명 결정:
-  - HT SOP: `HT_{suggested_title}.sop.md`
-  - TS SOP: `TS_{suggested_title}.sop.md`
-  - split: false 단일 SOP도 동일 규칙 적용 (e.g., `HT_보풀제거기_가이드.sop.md`)
+- You MUST name files using the customer journey convention:
+  - HT SOP: `HT_{여정단계}_{주제}.sop.md`
+  - TS SOP: `TS_{여정단계}_{주제}.sop.md`
 - You MUST use `.sop.md` extension (Agent SOP convention)
-- You MUST include all required sections (Overview, Parameters, Steps)
-- You SHOULD validate RFC 2119 keyword usage (MUST, SHOULD, MAY)
-- You SHOULD review for clarity and consistency
+- You MUST save all generated SOPs to the same output directory
+- You MUST use versioned directory if previous SOPs exist:
+  - First run: `results/{company}/03_sop/`
+  - Second run (if 03_sop/ exists): `results/{company}/03_sop_v2/`
+  - Third run: `results/{company}/03_sop_v3/` (etc.)
+- You MUST NOT overwrite existing SOP files — use versioned directory
+- You SHOULD validate each SOP after saving
 - You MUST create output directory if needed
-- You MUST NOT overwrite existing SOP without confirmation
 
-**File Creation:**
+**File Creation (multiple SOPs):**
 ```bash
-# In Claude Code
-Write results/{company}/03_sop/{company}_support.sop.md
+# In Claude Code — save each SOP as a separate file
+Write results/{company}/03_sop/HT_{topic1}.sop.md
+Write results/{company}/03_sop/TS_{topic2}.sop.md
+Write results/{company}/03_sop/HT_{topic3}.sop.md
+# ... (약 10-15개 파일)
 ```
 
-**Post-Save Validation:**
-- [ ] All sections present (Overview, Parameters, Steps, Examples)
-- [ ] RFC 2119 keywords used correctly
-- [ ] No placeholder text (e.g., "[TODO]", "[Fill in]")
-- [ ] Text is natural and professional in the detected language
-- [ ] Examples are concrete and realistic
-- [ ] File size reasonable (500-2000 lines)
+**Post-Save Validation (per file):**
+- [ ] 템플릿 섹션 모두 포함 (목적, 주의사항, 내용 or 문제해결프로세스, 톤앤매너, 에스컬레이션)
+- [ ] 구체적인 내용 포함 (APN 값, 실제 설정 경로, 실제 응답 문구 등)
+- [ ] No placeholder text (e.g., "[TODO]", "[내용 추가]")
+- [ ] 파일명이 내용을 잘 반영
+- [ ] File size reasonable (100-500 lines per SOP)
+
+**Output Summary (완료 후 출력):**
+```
+✅ Stage 3 완료: {N}개 SOP 생성
+저장 위치: results/{company}/03_sop/
+
+생성된 파일:
+  HT_구매후_바우처수신.sop.md
+  HT_USIM배송_일반문의.sop.md
+  TS_현지_데이터연결불량.sop.md
+  ...
+```
 
 ### 9. Generate Metadata
 
@@ -788,26 +790,19 @@ Write results/{company}/03_sop/metadata.json
 
 ## Examples
 
-### Example 1: Standard SOP Generation (Channel Corp.)
+### Example 1: SOP Generation (Channel Corp.)
 
 **Input:**
 - extraction_output_dir: `results/{company}/02_extraction`
 - company: "Channel Corp."
 - sop_title: "Channel Corp. Customer Support Assistant"
 - sop_type: "customer_support"
-- detail_level: "standard"
 
 **Execution Time**: ~5 minutes
 
 **Output:**
-- `{company}_support.sop.md` (1,200 lines)
+- `03_sop/` 디렉토리에 10-15개 SOP 파일
 - `metadata.json`
-
-**SOP Statistics:**
-- Steps: 5
-- Examples: 3
-- Troubleshooting Issues: 4
-- Total word count: ~4,000
 
 ### Example 2: Concise Troubleshooting SOP (Channel Corp.)
 
