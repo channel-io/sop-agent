@@ -109,7 +109,7 @@ Proceeding to Stage 1...
 
 Run clustering via `/stage1-clustering` skill with auto-detected parameters.
 
-**Documentation**: See [stage1-clustering.sop.md](stage1-clustering.sop.md)
+**Documentation**: See [stage1-clustering.sop.md](../../../agent-sops/stage1-clustering.sop.md)
 
 **Execution:**
 ```bash
@@ -167,7 +167,7 @@ company="{company}"                   # From Stage 1 output prefix
 
 Use LLM to extract patterns, FAQs, and response strategies from clusters.
 
-**Documentation**: See [stage2-extraction.sop.md](stage2-extraction.sop.md)
+**Documentation**: See [stage2-extraction.sop.md](../../../agent-sops/stage2-extraction.sop.md)
 
 **Execution:**
 ```bash
@@ -217,7 +217,7 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 
 Use LLM to generate Agent SOP documents from extracted patterns, organized by customer journey stages.
 
-**Documentation**: See [stage3-sop-generation.sop.md](stage3-sop-generation.sop.md)
+**Documentation**: See [stage3-sop-generation.sop.md](../../../agent-sops/stage3-sop-generation.sop.md)
 
 **Execution:**
 ```bash
@@ -265,7 +265,7 @@ Use LLM to generate Agent SOP documents from extracted patterns, organized by cu
 
 Generate Mermaid flowcharts from SOP documents.
 
-**Documentation**: See [stage4-flowchart-generation.sop.md](stage4-flowchart-generation.sop.md)
+**Documentation**: See [stage4-flowchart-generation.sop.md](../../../agent-sops/stage4-flowchart-generation.sop.md)
 
 **Execution:**
 ```bash
@@ -611,10 +611,10 @@ Each stage is independent and can be resumed:
 
 ## Related Documentation
 
-- **Stage 1 Clustering**: [stage1-clustering.sop.md](stage1-clustering.sop.md)
-- **Stage 2 Extraction**: [stage2-extraction.sop.md](stage2-extraction.sop.md)
-- **Stage 3 SOP Generation**: [stage3-sop-generation.sop.md](stage3-sop-generation.sop.md)
-- **Stage 4 Flowchart Generation**: [stage4-flowchart-generation.sop.md](stage4-flowchart-generation.sop.md)
+- **Stage 1 Clustering**: [stage1-clustering.sop.md](../../../agent-sops/stage1-clustering.sop.md)
+- **Stage 2 Extraction**: [stage2-extraction.sop.md](../../../agent-sops/stage2-extraction.sop.md)
+- **Stage 3 SOP Generation**: [stage3-sop-generation.sop.md](../../../agent-sops/stage3-sop-generation.sop.md)
+- **Stage 4 Flowchart Generation**: [stage4-flowchart-generation.sop.md](../../../agent-sops/stage4-flowchart-generation.sop.md)
 - **HT/TS Templates**: `templates/HT_template.md`, `templates/TS_template.md`
 - **Detailed Clustering Guide**: `../docs/clustering-guide.md`
 
@@ -657,6 +657,7 @@ Each stage is independent and can be resumed:
 | Stage | 파라미터 | 기본값 |
 |-------|---------|--------|
 | Stage 1 | sample_size | 3000 |
+| Stage 1 | umap | true (4096D → 30D) |
 | Stage 1 | k_range | 8,10,12,15,20,25 |
 | Stage 1 | tagging_mode | agent |
 | Stage 2 | n_samples_per_cluster | 20 |
