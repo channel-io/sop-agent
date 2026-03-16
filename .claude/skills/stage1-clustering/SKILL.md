@@ -101,7 +101,8 @@ Run the Python clustering script with Solar-pro agent tagging and monitor execut
     --prefix {company} \
     --sample {sample_size} \
     --tagging-mode agent \
-    --k {k}
+    --k {k} \
+    --umap
   ```
 - You MUST capture and display all output from the script
 - You MUST detect and report errors immediately if script fails

@@ -7,3 +7,5 @@ openpyxl>=3.1.0
 tqdm>=4.65.0
 python-dotenv>=1.0.0
 pyyaml>=6.0
+matplotlib>=3.7.0
+umap-learn>=0.5.0

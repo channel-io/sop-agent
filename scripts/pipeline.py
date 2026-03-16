@@ -39,6 +39,9 @@ def main():
     parser.add_argument('--output', '-o', default=DEFAULT_OUTPUT_DIR, help=f'출력 디렉토리 (기본: {DEFAULT_OUTPUT_DIR})')
     parser.add_argument('--prefix', '-p', default=DEFAULT_OUTPUT_PREFIX, help=f'출력 파일명 접두사 (기본: {DEFAULT_OUTPUT_PREFIX})')
     parser.add_argument('--cache-dir', default=DEFAULT_CACHE_DIR, help=f'캐시 디렉토리 (기본: {DEFAULT_CACHE_DIR})')
+    parser.add_argument('--umap', action='store_true', default=True, help='UMAP 차원 축소 적용 (기본: 활성화)')
+    parser.add_argument('--no-umap', action='store_true', help='UMAP 비활성화 (원본 4096D로 클러스터링)')
+    parser.add_argument('--umap-components', type=int, default=30, help='UMAP 목표 차원 수 (기본: 30)')
     
     args = parser.parse_args()
 
@@ -54,7 +57,7 @@ def main():
         else:
             sample_size = int(args.sample)
     else:
-        sample_size = 1000  # Default: 1000
+        sample_size = 3000  # Default: 3000
 
     print_header("🎯 Userchat-to-SOP Pipeline")
     print(f"   입력: {args.input}")
@@ -74,10 +77,13 @@ def main():
     print(f"   완료: {embeddings.shape}")
 
     print_header("4️⃣ K-Means 클러스터링...")
+    use_umap = args.umap and not args.no_umap
+    umap_components = args.umap_components
+
     if args.k and args.k != 'auto':
         # Fixed K value
         k_value = int(args.k)
-        labels, silhouette = cluster_data(embeddings, k_value)
+        labels, silhouette = cluster_data(embeddings, k_value, use_umap=use_umap, umap_components=umap_components)
         print(f"   K={k_value}, Silhouette={silhouette:.3f}")
     else:
         # Auto: find optimal K
@@ -87,7 +93,7 @@ def main():
         else:
             k_range = DEFAULT_K_RANGE
 
-        best_k, labels, results = find_optimal_k(embeddings, k_range)
+        best_k, labels, results = find_optimal_k(embeddings, k_range, use_umap=use_umap, umap_components=umap_components)
         best_result = next(r for r in results if r['n_clusters'] == best_k)
         print(f"   선택: K={best_k}, Silhouette={best_result['silhouette']:.3f}")
 

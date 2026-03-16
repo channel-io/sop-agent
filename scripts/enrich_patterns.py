@@ -25,15 +25,16 @@ import argparse
 def select_representative_conversations(
     cluster_messages: pd.DataFrame,
     cluster_id: int,
-    n_samples: int = 5
+    n_samples: int = 20
 ) -> List[Dict]:
     """
     클러스터에서 대표 대화 선정
 
     전략:
-    1. 메시지 수 기준 중간값 근처 대화 선정 (대표 케이스)
-    2. 가장 긴 대화 1개 (복잡한 케이스)
-    3. 가장 짧은 대화 1개 (간단한 케이스)
+    1. 가장 짧은 대화 1개 (간단한 케이스)
+    2. 가장 긴 대화 1개 (복잡한 케이스, 15턴 이상)
+    3. 중간 길이 대화 3개 (대표 케이스)
+    4. 나머지를 균등 간격 샘플링으로 채움 (n_samples까지)
     """
     chat_ids = cluster_messages['chatId'].unique()
 
@@ -50,40 +51,48 @@ def select_representative_conversations(
             'messages': conv.sort_values('createdAt').to_dict('records')
         })
 
-    # 정렬
+    # 길이 순 정렬
     chat_lengths.sort(key=lambda x: x['message_count'])
 
     selected = []
+    selected_ids = set()
 
-    # 1. 중간 길이 대화 (2-3개)
+    def add(item, reason):
+        if item['chat_id'] not in selected_ids:
+            selected.append({**item, 'selection_reason': reason})
+            selected_ids.add(item['chat_id'])
+
+    # 1. 가장 짧은 대화 (3턴 이상)
+    for item in chat_lengths:
+        if item['message_count'] >= 3:
+            add(item, 'simple')
+            break
+
+    # 2. 가장 긴 대화 (15턴 이상)
+    if chat_lengths[-1]['message_count'] > 15:
+        add(chat_lengths[-1], 'complex')
+
+    # 3. 중간 길이 대화 3개
     median_idx = len(chat_lengths) // 2
-    mid_range_start = max(0, median_idx - 1)
-    mid_range_end = min(len(chat_lengths), median_idx + 2)
+    for offset in [0, -1, 1, -2, 2]:
+        idx = median_idx + offset
+        if 0 <= idx < len(chat_lengths):
+            add(chat_lengths[idx], 'representative')
+        if len(selected) >= 5:
+            break
 
-    for idx in range(mid_range_start, mid_range_end):
-        if len(selected) < n_samples - 2:
-            selected.append({
-                **chat_lengths[idx],
-                'selection_reason': 'representative'
-            })
-
-    # 2. 가장 긴 대화 (복잡한 케이스) - 단, 15개 이상인 경우만
-    if len(chat_lengths) > 0 and chat_lengths[-1]['message_count'] > 15:
-        # 이미 선택되지 않은 경우만 추가
-        if chat_lengths[-1]['chat_id'] not in [s['chat_id'] for s in selected]:
-            selected.append({
-                **chat_lengths[-1],
-                'selection_reason': 'complex'
-            })
-
-    # 3. 가장 짧은 대화 (간단한 케이스) - 단, 3개 이상인 경우만
-    if len(chat_lengths) > 0 and chat_lengths[0]['message_count'] >= 3:
-        # 이미 선택되지 않은 경우만 추가
-        if chat_lengths[0]['chat_id'] not in [s['chat_id'] for s in selected]:
-            selected.append({
-                **chat_lengths[0],
-                'selection_reason': 'simple'
-            })
+    # 4. 나머지를 균등 간격 샘플링으로 채움
+    if len(chat_lengths) > len(selected) and len(selected) < n_samples:
+        remaining = [c for c in chat_lengths if c['chat_id'] not in selected_ids]
+        need = n_samples - len(selected)
+        if len(remaining) <= need:
+            for item in remaining:
+                add(item, 'additional')
+        else:
+            step = len(remaining) / need
+            for i in range(need):
+                idx = int(i * step)
+                add(remaining[idx], 'additional')
 
     # 최대 n_samples개로 제한
     selected = selected[:n_samples]
@@ -166,7 +175,7 @@ def extract_tone_samples(
     return samples
 
 
-def enrich_patterns(patterns_path: str, messages_path: str, output_path: str):
+def enrich_patterns(patterns_path: str, messages_path: str, output_path: str, n_samples: int = 20):
     """patterns.json에 대표 대화 샘플 추가"""
 
     print(f"📂 파일 로드 중...")
@@ -220,7 +229,7 @@ def enrich_patterns(patterns_path: str, messages_path: str, output_path: str):
 
         # 대표 대화 선정
         sample_convs = select_representative_conversations(
-            cluster_messages, cluster_id, n_samples=5
+            cluster_messages, cluster_id, n_samples=n_samples
         )
         cluster['sample_conversations'] = sample_convs
         print(f"   ✅ 대표 대화: {len(sample_convs)}개 선정")
@@ -276,6 +285,12 @@ def main():
         default='results/assacom/02_extraction/patterns_enriched.json',
         help='출력 파일 경로'
     )
+    parser.add_argument(
+        '--n-samples',
+        type=int,
+        default=20,
+        help='클러스터당 대표 대화 수 (기본값: 20)'
+    )
 
     args = parser.parse_args()
 
@@ -303,7 +318,8 @@ def main():
     enrich_patterns(
         str(patterns_path),
         str(messages_path),
-        str(output_path)
+        str(output_path),
+        n_samples=args.n_samples
     )
 
 
