@@ -191,7 +191,7 @@ class Action1,Alternative2 warningClass
 
 ### 🔴 Danger (빨간색) - dangerClass
 **사용 대상**:
-- 담당팀 전달
+- 에스컬레이션
 - 처리 불가
 - 긴급 상황
 - 고위험 조치
