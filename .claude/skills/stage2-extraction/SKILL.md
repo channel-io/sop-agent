@@ -55,16 +55,28 @@ Read clustering results, then **immediately run enrichment** to extract full con
   1. `{prefix}_tags.xlsx`: Cluster summary (ID, label, category, keywords, count)
   2. `analysis_report.md`: Analysis insights and recommendations
   3. (DO NOT read `{prefix}_clustered.xlsx` for samples — enrichment will provide better data)
-- You MUST run enrichment immediately:
+- You MUST create a bootstrap patterns.json from tags.xlsx, then run enrichment:
   ```bash
   mkdir -p results/{company}/02_extraction
+
+  # 1. Create minimal patterns.json from tags (cluster IDs only)
+  python3 -c "
+  import pandas as pd, json
+  tags = pd.read_excel('results/{company}/01_classification/{prefix}_tags.xlsx')
+  data = {'metadata': {'company': '{company}', 'bootstrap': True}, 'clusters': []}
+  for _, r in tags.iterrows():
+      data['clusters'].append({'cluster_id': int(r['cluster_id']), 'label': r['label'], 'category': r['category'], 'cluster_size': int(r['cluster_size'])})
+  with open('results/{company}/02_extraction/patterns.json', 'w') as f:
+      json.dump(data, f, ensure_ascii=False, indent=2)
+  "
+
+  # 2. Run enrichment to extract full conversation transcripts
   python3 scripts/enrich_patterns.py \
-    --patterns BOOTSTRAP \
-    --messages results/{company}/01_classification/{company}_messages.csv \
+    --patterns results/{company}/02_extraction/patterns.json \
+    --messages results/{company}/01_classification/{prefix}_messages.csv \
     --output results/{company}/02_extraction/conversations_by_cluster.json \
     --n-samples 20
   ```
-  - If `BOOTSTRAP` mode is not available, create a minimal patterns.json with cluster IDs from tags.xlsx first, then run enrichment
 - You MUST verify enrichment succeeded: each cluster has 20 conversation transcripts with full `turns`
 
 **Why enrichment first?**
