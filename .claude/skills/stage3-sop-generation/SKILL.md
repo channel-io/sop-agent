@@ -60,71 +60,59 @@ Read all Stage 2 outputs to understand extracted patterns and strategies.
   - `templates/TS_template.md`: TS SOP 구조 기준 (목적/주의사항/문제해결프로세스/톤앤매너/에스컬레이션)
   - 생성하는 모든 SOP는 반드시 이 템플릿 구조를 따라야 한다
 - You MUST read all JSON files from Stage 2:
-  1. `patterns.json`: All patterns per cluster
-  2. `faq.json`: FAQ pairs
-  3. `response_strategies.json`: Response strategies and escalation rules
+  1. `patterns.json`: Patterns per cluster + **`sop_topic_map`** (authoritative SOP plan from Stage 2)
+  2. `faq.json`: FAQ pairs (organized by SOP topic)
+  3. `response_strategies.json`: Response strategies per SOP topic
   4. `keywords.json`: Keyword taxonomy
   5. `extraction_summary.md`: Summary and automation opportunities
 - You MUST read enriched patterns (required, not optional):
-  6. `patterns_enriched.json`: Patterns with **20 real conversation transcripts per cluster** (from Stage 2 Step 7)
-  - Contains 20 representative conversations per cluster (actual verbatim dialog)
-  - Contains 20 tone-and-manner samples per cluster
-  - **Read the actual `turns` in each conversation** to extract real customer expressions, agent response templates, and specific troubleshooting steps
+  6. `patterns_enriched.json`: Patterns with **20 real conversation transcripts per cluster**
+  - Contains full conversation `turns` (not summaries)
+  - Contains tone-and-manner samples per cluster
+  - **Read the actual `turns` in each conversation** to extract real customer expressions, agent response templates, and troubleshooting steps
 - You MUST verify JSON structure is valid
-- You MUST NOT map SOPs 1:1 to clusters — organize by **customer journey stages** instead
-- You MUST identify cross-cluster patterns (e.g., "데이터 로밍 설정" appearing in multiple clusters → single dedicated SOP)
-- You SHOULD group related clusters into customer journey stages: 구매 전 → 구매/결제 → 설치 → 출국 전 → 현지 도착 → 현지 사용 → 기타
-- You SHOULD generate ~12 SOPs covering all clusters (not 1 SOP per cluster)
+- You MUST follow `sop_topic_map` from `patterns.json` — this is the **authoritative plan** from Stage 2
+  - DO NOT re-classify clusters or redefine SOP topics
+  - DO NOT add or remove topics beyond what the map specifies
+  - Each topic in the map becomes exactly one SOP file
 - You SHOULD identify which patterns will become SOP steps
-- You MAY skip low-frequency patterns within a cluster (< 2% of cluster), but NOT the cluster itself
+- You MAY skip low-frequency patterns within a topic (< 2%), but NOT the topic itself
 
 **Reading Process:**
 ```bash
 # In Claude Code - Stage 2 outputs
-Read results/{company}/02_extraction/patterns.json
+Read results/{company}/02_extraction/patterns.json      # includes sop_topic_map
 Read results/{company}/02_extraction/faq.json
 Read results/{company}/02_extraction/response_strategies.json
 Read results/{company}/02_extraction/keywords.json
 Read results/{company}/02_extraction/extraction_summary.md
-
-# RECOMMENDED: Stage 2 enriched patterns (if available)
-Read results/{company}/02_extraction/patterns_enriched.json  # 샘플 이미 포함됨 (권장)
-
-# FALLBACK: Stage 1 output (if patterns_enriched.json doesn't exist)
-# Read results/{company}/{company}_clustered.xlsx  # 클러스터별 샘플 직접 추출
+Read results/{company}/02_extraction/patterns_enriched.json  # full conversations
 ```
 
 **Analysis Checklist:**
-- [ ] How many distinct inquiry types? (will become Parameters)
-- [ ] What are common workflows? (will become Steps)
-- [ ] Which patterns need escalation? (will become Constraints)
-- [ ] What automation opportunities exist? (will inform Step design)
-- [ ] Are there industry-specific terms? (will need definitions)
+- [ ] `sop_topic_map` present in patterns.json? (required — defines what SOPs to generate)
+- [ ] How many SOP topics defined? (each becomes one SOP file)
+- [ ] Which topics are HT vs TS?
+- [ ] Which patterns map to which topic?
+- [ ] Which conversations from enriched data correspond to each topic?
 
-### 2. Design SOP Structure
+### 2. Design SOP Structure (from `sop_topic_map`)
 
-Plan the Agent SOP structure based on extracted patterns, organized by **customer journey stages**.
+Read the `sop_topic_map` from `patterns.json` and use it as the **definitive SOP plan**. Do NOT redesign the topic structure.
 
-**Customer Journey Mapping (필수):**
+**Using `sop_topic_map` (필수):**
 
-클러스터를 1:1 매핑하지 말고, 고객 여정 7단계를 기준으로 SOP를 구성한다:
+Stage 2 Step 3에서 이미 클러스터를 분석하고 SOP 토픽을 정의했다. Stage 3은 이 맵을 **그대로 따른다**.
 
 ```
-고객 여정 단계 (예시 — 회사/서비스에 맞게 조정):
-1. 구매 전       → 상품 정보, 요금제 문의
-2. 구매/결제     → 주문, 결제, 쿠폰
-3. 수령/설치     → 배송, 개통 방법
-4. 출국 전       → 준비 방법, 설정
-5. 현지 도착     → 초기 연결, 활성화
-6. 현지 사용     → 데이터, 통화, 트러블슈팅
-7. 기타          → 환불, 재발행, 계정 관련
+sop_topic_map에서 가져올 정보:
+- topic_id → SOP 파일명
+- title → SOP 제목
+- type (HT/TS) → 사용할 템플릿
+- journey_stage → 파일명 접두사
+- source_clusters → 어떤 클러스터/대화를 참고할지
+- key_patterns → SOP 내용의 핵심 패턴
 ```
-
-**SOP 설계 원칙:**
-1. 클러스터 → 여정 단계 매핑: 각 클러스터가 어느 여정 단계에 속하는지 판단
-2. 단계 내 여러 클러스터 통합: 유사한 클러스터는 하나의 SOP로 합침
-3. 혼합 클러스터 분리: 하나의 클러스터에 서로 다른 여정 단계가 섞여 있으면 분리
-4. 목표: 약 10-15개 SOP (1 클러스터 = 1 SOP가 되는 것을 피할 것)
 
 **SOP 파일명 규칙:**
 ```
@@ -132,18 +120,18 @@ HT_{여정단계}_{주제}.sop.md   → 정보 안내 중심
 TS_{여정단계}_{주제}.sop.md   → 문제 해결 중심
 
 예시:
-HT_구매후_바우처수신.sop.md
-HT_USIM배송_일반문의.sop.md
-TS_현지_데이터연결불량.sop.md
-TS_개통_활성화오류.sop.md
+HT_구매전_제품견적상담.sop.md
+TS_사용중_하드웨어불량및수리.sop.md
 ```
 
 **Constraints:**
-- You MUST follow `templates/HT_template.md` for HT SOPs and `templates/TS_template.md` for TS SOPs (Step 1에서 반드시 읽었어야 함)
+- You MUST follow `sop_topic_map` exactly — one SOP per topic, no additions or removals
+- You MUST follow `templates/HT_template.md` for HT SOPs and `templates/TS_template.md` for TS SOPs
 - You MUST NOT use Overview/Parameters/Steps/Examples 구조 — 템플릿에 없는 섹션은 추가하지 말 것
-- You MUST NOT create 1 SOP per cluster — always group by customer journey
+- You MUST NOT redesign the topic structure or re-classify clusters (already done in Stage 2)
+- You MUST read enriched conversations for each topic's `source_clusters` when writing that SOP
 - You SHOULD include all sections defined in the template (목적, 주의사항, 내용/문제해결프로세스, 톤앤매너, 에스컬레이션, 관련SOP)
-- You SHOULD add cross-references between related SOPs (Related SOP 섹션)
+- You SHOULD add cross-references between related SOPs (관련 SOP 섹션)
 - You MAY merge similar patterns into single 케이스 under 해결책 안내
 - You MUST ensure each SOP has a clear, single responsibility
 
