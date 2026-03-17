@@ -1,6 +1,7 @@
 # context
 PROGRESS.md
 CLAUDE.md
+README_ver_rosa.md
 
 # Python
 __pycache__/
@@ -27,6 +28,7 @@ venv/
 archive/
 results/
 !results/.gitkeep
+legacy/
 
 # Tests
 tests/
@@ -46,3 +48,7 @@ data/
 .DS_Store
 .cursor/
 .vscode/
+
+# Documentation
+docs/
+sops/
