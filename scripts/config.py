@@ -21,16 +21,30 @@ except ImportError:
 # Load API key from environment variable or .env file
 UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY")
 
-if not UPSTAGE_API_KEY:
-    # Import lang_config lazily to avoid circular imports
+# Embedding priority: local (BGE-m3-ko) first → Solar API fallback
+LOCAL_EMBEDDING_MODEL = "dragonkue/BGE-m3-ko"
+
+def _check_local_embedding_available():
     try:
-        from scripts.lang_config import L
-        _msg = L.config.api_key_error
-    except Exception:
-        _msg = "❌ UPSTAGE_API_KEY not found!\n\n💡 Claude Code에서 /request-api-key 를 실행하면\n   Channel.io로 API 키를 자동으로 요청할 수 있습니다."
-    raise ValueError(_msg)
+        import sentence_transformers  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+LOCAL_EMBEDDING_AVAILABLE = _check_local_embedding_available()
+
+if not LOCAL_EMBEDDING_AVAILABLE and not UPSTAGE_API_KEY:
+    raise ValueError(
+        "❌ 임베딩 모델을 사용할 수 없습니다.\n"
+        "   옵션 1: pip install sentence-transformers (로컬 모델)\n"
+        "   옵션 2: .env에 UPSTAGE_API_KEY 설정 (Solar API)"
+    )
 
 UPSTAGE_BASE_URL = "https://api.upstage.ai/v1"
+
+# Anthropic API (Claude) - optional, used for tagging if available
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
 
 EMBEDDING_MODEL = "embedding-passage"
 LLM_MODEL = "solar-mini"
