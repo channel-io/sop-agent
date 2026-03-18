@@ -160,10 +160,43 @@ Read `alf_setup/alf_setup_data.json` (single structured file) to produce two out
 
 **No hallucination**: Only include content explicitly stated in the SOPs.
 
-Include:
-1. **Tone & manner** — extracted from SOP tone sections. For recommended expressions, do NOT just list examples — synthesize them into **behavioral guidelines** (원칙), then provide supporting examples under each guideline. Aim for 5–7 guidelines that cover the full range of expression patterns found (e.g., concreteness principle, empathy-first principle, step-by-step resolution, closing completeness, etc.). Do NOT include a forbidden expressions section.
-2. **Escalation conditions** — extracted from each SOP's escalation table. ALF cannot route to specific internal teams — frame all escalation as **"상담사 연결"**. Group cases by situation pattern and synthesize into **decision principles** (e.g., "상담사 연결 기준: 위약금 정확 금액 산정이 필요한 경우"). List representative examples under each principle. End with an "즉시 상담사 연결 트리거 키워드" block.
-3. **Non-automatable situations** — extracted from flowchart 🔴 escalation cases
+**Reference**: Fetch the ALF 규칙 레퍼런스 Notion page (`https://www.notion.so/channelio/2af74b55ec7c80db947edb39c2d59f96`) using the `mcp__claude_ai_Notion__notion-fetch` tool. This page contains best-practice rule examples and detailed condition values (상담원 연결 조건, 공감 표현, 이슈 응대, 지식 참조 원칙 등) that MUST be used to fill in the detailed condition values of each section. The SOP data provides the company-specific content; the Notion reference provides the structural depth and condition logic.
+
+Include all of the following sections:
+
+1. **Tone & Manner** — Three sub-sections:
+   - **기본 페르소나**: ALF의 역할 정의 (1~2문장)
+   - **말투 규칙**: 격식체/비격식체 혼합, 답변 길이 제한 (400자), 가독성 규칙
+   - **응대 가이드라인**: Synthesize SOP tone sections into **behavioral guidelines** (원칙) with supporting examples. Include: 첫 질문 확인 원칙, 첫 인사 1회 원칙, 구체적 경로 안내, 공감 우선, 단계별 해결, 대안 제시, 사전 검증, 마무리 완결성. Aim for 5–10 guidelines.
+
+2. **공감 표현 규칙** — Detailed empathy response rules:
+   - **트리거 조건**: 감정 표현 패턴 (툴툴거림, 황당함, 어려움, 불만)
+   - **감정별 공감 매핑 테이블**: 고객 감정 → ALF 응답 (최소 3~5개)
+   - **강한 불만 시 회유**: 사용 중단 언급 시 공감/사과 → 대안 → 회유
+   - Reference the Notion page 공감표현 예시 for structural depth
+
+3. **Escalation Conditions** — Two sub-sections:
+   - **상담원 연결 요청 단계별 응대 ({N}회 규칙)**: 1회차(ALF 응대) → 2회차(재안내 + ALF 장점 어필) → {N}회차(즉시 연결). Include exact response templates for each stage. Also cover: 상담 도중 연결 요청, 전화 상담 요청. Reference the Notion page 상담원 연결 조건 for the 3-strike pattern and exact response templates.
+   - **즉시 상담원 연결 조건**: Group by situation pattern (강한 불만, AI 불신, 기술 오류, 서비스 장애, 보안, 결제/환불, 견적, API/개발, 외부 연동 등). End with 트리거 키워드 block.
+
+4. **이슈 문의 응대 흐름** — Step-by-step diagnosis flow:
+   - **트리거 키워드**: 장애, 오류, 접속 불가 등
+   - **응대 플로우**: 오류 화면 요청 → RAG 확인 → 기능 확인 → 원인 분류 (기존 동작 장애 vs 신규 설정 문제) → 상담원 연결 조건
+   - Reference the Notion page 이슈문의응대 for the complete flow structure
+
+5. **지식 참조 원칙** — 6 principles:
+   - 등록된 지식만 참조, 추측 절대 금지, 경쟁사 언급 금지, URL 검증, AI 메타 표현 금지, 안내 불가 시 대응
+   - Include ❌/✅ 예시 pairs for each principle
+   - Reference the Notion page 지식 참조 예시 for the exact patterns
+
+6. **피드백 수집 규칙** — (SOP에서 피드백/건의 관련 패턴이 발견된 경우):
+   - 트리거 조건, 응대 흐름 (공감 → 현황 → 접수 유도 → 배경 요청), 유의사항
+
+7. **반복 질문 대응** — 횟수별 대응 (1회 상세 → 2회 요약 → 3회+ 상담원 고려)
+
+8. **고객사별 특수 규칙** — SOP에서 해당 고객사에만 적용되는 특수 규칙 (예: 가격 개편 응대, 특정 프로모션 등)
+
+9. **Non-automatable situations** — extracted from flowchart 🔴 escalation cases
 
 **Output format**: `templates/ALF_RULES_DRAFT_template.md` 구조를 따릅니다.
 
