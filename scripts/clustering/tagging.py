@@ -4,11 +4,48 @@ from openai import OpenAI
 from ..config import (
     UPSTAGE_API_KEY,
     UPSTAGE_BASE_URL,
+    ANTHROPIC_API_KEY,
+    ANTHROPIC_MODEL,
     LLM_MODEL,
     LLM_TEMPERATURE,
     LLM_SAMPLES_PER_CLUSTER
 )
 from ..lang_config import L
+
+
+def _use_claude():
+    """Claude API 사용 가능 여부"""
+    return bool(ANTHROPIC_API_KEY)
+
+
+def _get_upstage_client():
+    return OpenAI(api_key=UPSTAGE_API_KEY, base_url=UPSTAGE_BASE_URL)
+
+
+def _call_llm(prompt, llm_model=None):
+    """Claude 우선, 없으면 Upstage fallback"""
+    if _use_claude():
+        import anthropic
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        model = llm_model or ANTHROPIC_MODEL
+        print(f"   LLM: Claude ({model})")
+        response = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=LLM_TEMPERATURE or 0.3
+        )
+        return response.content[0].text
+
+    client = _get_upstage_client()
+    model = llm_model or LLM_MODEL
+    print(f"   LLM: Solar ({model})")
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=LLM_TEMPERATURE or 0.3
+    )
+    return response.choices[0].message.content
 
 # ───────────────────────────────────────────────────────────── #
 # 실제 대화 메시지 추출
@@ -71,18 +108,14 @@ def tag_clusters(df, df_msg=None, mode='agent', llm_model=None, samples_per_clus
 # ───────────────────────────────────────────────────────────── #
 
 def _tag_with_api(df, df_msg=None, llm_model=None, samples_per_cluster=None):
-    if llm_model is None:
-        llm_model = LLM_MODEL
     if samples_per_cluster is None:
         samples_per_cluster = LLM_SAMPLES_PER_CLUSTER
 
-    client = OpenAI(api_key=UPSTAGE_API_KEY, base_url=UPSTAGE_BASE_URL)
     cluster_tags = []
 
     for cluster_id in sorted(df['cluster_id'].unique()):
         cluster_df = df[df['cluster_id'] == cluster_id]
 
-        # 실제 대화 또는 enhanced_text 중 선택
         if df_msg is not None:
             samples = _get_conversation_samples(cluster_df, df_msg, samples_per_cluster)
         else:
@@ -114,12 +147,7 @@ def _tag_with_api(df, df_msg=None, llm_model=None, samples_per_cluster=None):
         )
 
         try:
-            response = client.chat.completions.create(
-                model=llm_model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=LLM_TEMPERATURE
-            )
-            result_text = response.choices[0].message.content
+            result_text = _call_llm(prompt, llm_model)
             result_json = json.loads(result_text)
             cluster_tags.append({
                 'cluster_id': cluster_id,
@@ -145,12 +173,8 @@ def _tag_with_api(df, df_msg=None, llm_model=None, samples_per_cluster=None):
 # ───────────────────────────────────────────────────────────── #
 
 def _tag_with_agent(df, df_msg=None, llm_model=None, samples_per_cluster=None):
-    if llm_model is None:
-        llm_model = LLM_MODEL
     if samples_per_cluster is None:
         samples_per_cluster = LLM_SAMPLES_PER_CLUSTER
-
-    client = OpenAI(api_key=UPSTAGE_API_KEY, base_url=UPSTAGE_BASE_URL)
 
     cluster_summaries = []
     empty_cluster_tags = []
@@ -201,14 +225,7 @@ def _tag_with_agent(df, df_msg=None, llm_model=None, samples_per_cluster=None):
     )
 
     try:
-        temp = LLM_TEMPERATURE if LLM_TEMPERATURE is not None else 0.0
-        response = client.chat.completions.create(
-            model=llm_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=temp
-        )
-
-        result_text = response.choices[0].message.content.strip()
+        result_text = _call_llm(prompt, llm_model).strip()
         if result_text.startswith("```"):
             result_text = result_text.split("```")[1]
             if result_text.startswith("json"):
