@@ -54,6 +54,44 @@ import numpy as np
 from openai import OpenAI
 
 
+# ─────────────────────── LLM 클라이언트 ──────────────────────────────────── #
+
+def _use_claude():
+    """Claude API 사용 가능 여부"""
+    return bool(os.environ.get("ANTHROPIC_API_KEY"))
+
+
+def _get_upstage_client():
+    api_key = os.environ.get("UPSTAGE_API_KEY", "")
+    if not api_key:
+        raise ValueError("UPSTAGE_API_KEY 환경변수가 설정되지 않았습니다.")
+    return OpenAI(api_key=api_key, base_url="https://api.upstage.ai/v1")
+
+
+def _call_llm(prompt: str, max_tokens: int = 2048) -> str:
+    """Claude 우선, 없으면 Upstage Solar fallback"""
+    if _use_claude():
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        model = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+        response = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+        )
+        return response.content[0].text
+
+    client = _get_upstage_client()
+    response = client.chat.completions.create(
+        model="solar-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+        max_tokens=max_tokens,
+    )
+    return response.choices[0].message.content
+
+
 # ─────────────────────────── 상수 ────────────────────────────────────────── #
 
 class DialogType:
@@ -172,7 +210,7 @@ def _parse_type(answer: str) -> str:
     return DialogType.UNCLEAR
 
 
-def classify_chunk(client: OpenAI, chunk: list, retry: int = 3) -> dict:
+def classify_chunk(chunk: list, retry: int = 3) -> dict:
     """
     (chat_id, text) 리스트 최대 50건을 한 번의 API 호출로 분류.
     Returns: {chat_id: dialog_type}
@@ -190,13 +228,7 @@ def classify_chunk(client: OpenAI, chunk: list, retry: int = 3) -> dict:
 
     for attempt in range(retry):
         try:
-            resp = client.chat.completions.create(
-                model="solar-mini",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=len(chunk) * 25,  # 건당 최대 25토큰
-            )
-            raw = resp.choices[0].message.content.strip()
+            raw = _call_llm(prompt, max_tokens=len(chunk) * 25).strip()
 
             # JSON 파싱
             parsed = _json.loads(raw)
@@ -216,21 +248,22 @@ def classify_chunk(client: OpenAI, chunk: list, retry: int = 3) -> dict:
     return {chat_id: DialogType.UNCLEAR for chat_id, _ in chunk}
 
 
-def classify_batch(client, chat_items: list, workers: int = 2, chunk_size: int = 50) -> dict:
+def classify_batch(chat_items: list, workers: int = 2, chunk_size: int = 50) -> dict:
     """
     (chat_id, text) 리스트를 chunk_size 단위로 묶어 병렬 분류.
     1000건 / 50 = 20 API 호출, workers=2로 동시 처리.
     Returns: {chat_id: dialog_type}
     """
+    llm_label = "Claude" if _use_claude() else "Solar-mini"
     chunks = [chat_items[i:i+chunk_size] for i in range(0, len(chat_items), chunk_size)]
     total_chunks = len(chunks)
     total_items  = len(chat_items)
     results = {}
 
-    print(f"\n🤖 LLM 대화유형 분류 — {total_items}건 → {total_chunks}개 청크 (workers={workers}, chunk={chunk_size})\n{'─'*50}")
+    print(f"\n🤖 LLM 대화유형 분류 ({llm_label}) — {total_items}건 → {total_chunks}개 청크 (workers={workers}, chunk={chunk_size})\n{'─'*50}")
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {executor.submit(classify_chunk, client, chunk): i for i, chunk in enumerate(chunks)}
+        futures = {executor.submit(classify_chunk, chunk): i for i, chunk in enumerate(chunks)}
         done_chunks = 0
         for future in as_completed(futures):
             chunk_result = future.result()
@@ -574,11 +607,9 @@ def main():
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # API 클라이언트
-    api_key = os.environ.get("UPSTAGE_API_KEY", "")
-    if not api_key:
-        raise ValueError("UPSTAGE_API_KEY 환경변수가 설정되지 않았습니다.")
-    client = OpenAI(api_key=api_key, base_url="https://api.upstage.ai/v1")
+    # API 확인
+    if not _use_claude() and not os.environ.get("UPSTAGE_API_KEY"):
+        raise ValueError("ANTHROPIC_API_KEY 또는 UPSTAGE_API_KEY 환경변수가 필요합니다.")
 
     # ── 데이터 로드 ────────────────────────────────────────────────────────── #
     print(f"\n📂 데이터 로드 중...")
@@ -611,7 +642,7 @@ def main():
         print(f"  추출 완료: {len(chat_items)}건")
 
     # ── LLM 분류 ──────────────────────────────────────────────────────────── #
-    chat_types = classify_batch(client, chat_items, workers=args.workers, chunk_size=args.chunk_size)
+    chat_types = classify_batch(chat_items, workers=args.workers, chunk_size=args.chunk_size)
 
     # 분류 결과 요약
     from collections import Counter
