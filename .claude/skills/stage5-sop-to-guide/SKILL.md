@@ -250,8 +250,11 @@ Each item MUST show two things separately:
 python3 scripts/analyze_dialogs.py \
     --messages results/{company}/01_classification/{company}_messages.csv \
     --tags     results/{company}/01_classification/{company}_tags.xlsx \
+    --patterns results/{company}/02_extraction/patterns.json \
     --output   results/{company}/05_sales_report/analysis
 ```
+
+> `--patterns` 옵션은 Stage 2의 `sop_topic_map`을 읽어 히트맵 Y축을 **Stage 1 클러스터가 아닌 Stage 2 재분류 토픽** 기준으로 집계합니다. 생략 시 Stage 1 클러스터 기준으로 동작합니다.
 
 Script produces:
 - `analysis/cross_analysis.json` — cluster × dialog_type 교차표 + 통계
@@ -272,20 +275,19 @@ Script produces:
 Without using the Python script, the agent reads the message data directly and classifies in batches.
 
 1. `_messages.csv`를 Read 툴로 읽어 chatId별 첫 6턴 텍스트 추출
-2. **Task 툴로 5개 서브에이전트를 단일 메시지에서 동시에** 실행:
+2. `patterns.json`의 `sop_topic_map`을 Read 툴로 읽어 cluster_id → topic_id 매핑 테이블 생성
+3. **Task 툴로 5개 서브에이전트를 단일 메시지에서 동시에** 실행:
    - 각 서브에이전트: ~200건 배치를 받아 7가지 유형으로 분류 후 JSON 반환
    - prompt 예시: `아래 대화 목록을 읽고 각 chatId를 7가지 유형 중 하나로 분류하세요. 결과를 {"chatId": "유형"} JSON으로만 반환하세요. [대화 목록]`
-3. 5개 결과 합산 → 교차표 계산 → `cross_analysis.json` Write
-4. `generate_heatmap()` 직접 호출하여 `heatmap.png` 생성:
-   ```python
-   python3 -c "
-   import json, sys
-   sys.path.insert(0, 'scripts')
-   from analyze_dialogs import generate_heatmap
-   from pathlib import Path
-   data = json.loads(Path('results/{company}/05_sales_report/analysis/cross_analysis.json').read_text())
-   generate_heatmap(data, Path('results/{company}/05_sales_report/analysis/heatmap.png'))
-   "
+4. 5개 결과 합산 → **sop_topic_map 기준으로** 교차표 계산 → `cross_analysis.json` Write
+   - Y축은 Stage 1 클러스터가 아닌 **Stage 2 재분류 토픽** 기준
+   - partial 클러스터는 `estimated_records` 비율로 토픽에 분배
+   - `cross_analysis.json`에 `"y_axis": "topic"` 필드 포함
+5. `generate_heatmap.py`로 `heatmap.png` 생성:
+   ```bash
+   python3 scripts/generate_heatmap.py \
+       --input  results/{company}/05_sales_report/analysis/cross_analysis.json \
+       --output results/{company}/05_sales_report/analysis/heatmap.png
    ```
 
 **Constraints:**

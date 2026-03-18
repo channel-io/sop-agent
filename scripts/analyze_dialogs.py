@@ -110,7 +110,7 @@ def extract_first_turn(chat_df: pd.DataFrame) -> str:
     """
     chatId별 대화에서 분류용 텍스트 추출.
 
-    전략: 시간 순으로 최대 6개 메시지(user/manager 합산)를 수집하여
+    전략: 시간 순으로 최대 8개 메시지(user/manager 합산)를 수집하여
     "[고객] ...\n[상담사] ...\n" 형태로 연결.
     빈 메시지(nan, 공백)는 제외하고 카운트.
     """
@@ -326,6 +326,109 @@ def build_cross_table(
     }
 
 
+# ─────────────────────── 토픽 리매핑 ─────────────────────────────────────── #
+
+def remap_to_topics(cross_data: dict, patterns_path: str) -> dict:
+    """
+    Stage 2 sop_topic_map을 읽어 cluster 기반 cross_data를 topic 기반으로 변환.
+
+    partial 클러스터는 estimated_records 비율로 분배.
+    """
+    with open(patterns_path, encoding="utf-8") as f:
+        patterns = json.load(f)
+
+    topic_map = patterns.get("sop_topic_map", {})
+    topics = topic_map.get("topics", [])
+    if not topics:
+        print("  ⚠️  sop_topic_map이 비어있음 — 클러스터 기준 유지")
+        return cross_data
+
+    cross_table    = cross_data["cross_table"]     # {str(cid): {dtype: count}}
+    cluster_stats  = cross_data["cluster_stats"]    # {str(cid): {label, total_chats, ...}}
+
+    # cluster_id → 소속 토픽 목록 (비율 포함)
+    # 한 클러스터가 여러 토픽에 partial로 배정될 수 있음
+    cluster_topic_shares: dict[int, list[tuple[str, str, float]]] = {}  # cid → [(topic_id, title, share)]
+
+    for topic in topics:
+        tid   = topic["topic_id"]
+        title = topic["title"]
+        srcs  = topic.get("source_clusters", [])
+
+        for src in srcs:
+            cid = src["cluster_id"]
+            if cid not in cluster_topic_shares:
+                cluster_topic_shares[cid] = []
+            cluster_topic_shares[cid].append((tid, title, topic.get("estimated_records", 0)))
+
+    # share 비율 계산: 같은 cluster를 공유하는 토픽들 사이에서 estimated_records 비율로 분배
+    cluster_shares: dict[int, list[tuple[str, str, float]]] = {}
+    for cid, entries in cluster_topic_shares.items():
+        total_est = sum(e[2] for e in entries)
+        if total_est == 0:
+            # 균등 분배
+            share = 1.0 / len(entries) if entries else 1.0
+            cluster_shares[cid] = [(tid, title, share) for tid, title, _ in entries]
+        else:
+            cluster_shares[cid] = [(tid, title, est / total_est) for tid, title, est in entries]
+
+    # 토픽별 집계
+    topic_cross:  dict[str, dict[str, int]]   = {}   # tid → {dtype: count}
+    topic_meta:   dict[str, dict]              = {}   # tid → {title, total_chats, ...}
+
+    for topic in topics:
+        tid = topic["topic_id"]
+        topic_cross[tid] = {t: 0 for t in DialogType.ALL}
+        topic_meta[tid]  = {
+            "label":           topic["title"],
+            "total_chats":     0,
+            "avg_turns":       0,
+            "avg_handling_min": 0,
+            "source_clusters": [s["cluster_id"] for s in topic.get("source_clusters", [])],
+        }
+
+    # cross_table의 각 클러스터 데이터를 토픽에 분배
+    for cid_str, type_counts in cross_table.items():
+        cid = int(cid_str)
+        shares = cluster_shares.get(cid)
+        if not shares:
+            continue  # sop_topic_map에 없는 클러스터 → 무시
+
+        cstats = cluster_stats.get(cid_str, {})
+        chats  = cstats.get("total_chats", 0)
+
+        for dtype, cnt in type_counts.items():
+            for tid, _, share in shares:
+                topic_cross[tid][dtype] = topic_cross[tid].get(dtype, 0) + round(cnt * share)
+
+        for tid, _, share in shares:
+            topic_meta[tid]["total_chats"] += round(chats * share)
+
+    # 0건 토픽 제거
+    topic_cross = {tid: v for tid, v in topic_cross.items() if sum(v.values()) > 0}
+
+    # 전체 유형별 합계 재계산
+    type_totals: dict[str, int] = {t: 0 for t in DialogType.ALL}
+    for tc in topic_cross.values():
+        for dtype, cnt in tc.items():
+            type_totals[dtype] += cnt
+
+    total_chats = sum(type_totals.values())
+
+    result = {
+        "total_chats":   total_chats,
+        "dialog_types":  DialogType.ALL,
+        "type_totals":   type_totals,
+        "type_pct":      {t: round(c / total_chats * 100, 1) if total_chats else 0
+                          for t, c in type_totals.items()},
+        "cross_table":   topic_cross,
+        "cluster_stats": {tid: topic_meta.get(tid, {}) for tid in topic_cross},
+        "y_axis":        "topic",  # 히트맵이 토픽 기준임을 표시
+    }
+    print(f"  ✅ sop_topic_map 기반 리매핑 완료: {len(topic_cross)}개 토픽")
+    return result
+
+
 # ─────────────────────── 히트맵 생성 ─────────────────────────────────────── #
 
 def generate_heatmap(cross_data: dict, output_path: Path) -> None:
@@ -351,12 +454,25 @@ def generate_heatmap(cross_data: dict, output_path: Path) -> None:
     dtypes       = cross_data["dialog_types"]
     total        = cross_data["total_chats"]
 
-    # 정렬된 클러스터 목록
-    sorted_cids  = sorted(cross_table.keys(), key=lambda x: int(x))
-    row_labels   = [
-        f"C{cid}: {cluster_stats[cid]['label'][:15]}"
-        for cid in sorted_cids
-    ]
+    # 정렬된 클러스터/토픽 목록
+    is_topic = cross_data.get("y_axis") == "topic"
+    if is_topic:
+        # 토픽 기반: total_chats 내림차순
+        sorted_cids = sorted(
+            cross_table.keys(),
+            key=lambda x: sum(cross_table[x].values()),
+            reverse=True,
+        )
+        row_labels = [
+            f"{cluster_stats[cid]['label'][:18]}"
+            for cid in sorted_cids
+        ]
+    else:
+        sorted_cids = sorted(cross_table.keys(), key=lambda x: int(x))
+        row_labels = [
+            f"C{cid}: {cluster_stats[cid]['label'][:15]}"
+            for cid in sorted_cids
+        ]
     col_labels   = [d.split(".")[1] for d in dtypes]  # 숫자 제거
 
     # 데이터 행렬 (비율 %)
@@ -423,13 +539,15 @@ def generate_heatmap(cross_data: dict, output_path: Path) -> None:
     cbar = fig.colorbar(im, ax=ax, shrink=0.55, pad=0.02)
     cbar.set_label("비율 (%)", fontsize=10)
 
+    y_label = "SOP 토픽" if is_topic else "클러스터"
     ax.set_title(
-        f"상담주제 × 대화유형 교차분석\n(전체 {total:,}건 기준 비율% | 클러스터 평균 턴수)",
+        f"상담주제 × 대화유형 교차분석\n(전체 {total:,}건 기준 비율% | {y_label} 평균 턴수)",
         fontsize=14, fontweight="bold", pad=15,
     )
+    ax.set_ylabel(f"상담주제 ({y_label})", fontsize=10, labelpad=8)
     ax.text(
         0.5, -0.06,
-        "※ 10% 이상 Bold 표시  |  각 셀: 전체 대비 비율% (상단) · 클러스터 평균 턴수 (하단)",
+        f"※ 10% 이상 Bold 표시  |  각 셀: 전체 대비 비율% (상단) · {y_label} 평균 턴수 (하단)",
         transform=ax.transAxes, ha="center", fontsize=9, color="#666",
     )
 
@@ -450,6 +568,7 @@ def main():
     parser.add_argument("--chunk-size", type=int,  default=50,    help="한 번에 분류할 건수 (기본 50)")
     parser.add_argument("--user-only",  action="store_true",      help="유저 발화만 추출 (기본: 6턴 혼합)")
     parser.add_argument("--sample",     type=int,  default=None,  help="테스트용 샘플 수 (기본 전체)")
+    parser.add_argument("--patterns",   default=None, help="Stage 2 patterns.json 경로 (sop_topic_map 기반 Y축 집계)")
     args = parser.parse_args()
 
     output_dir = Path(args.output)
@@ -509,6 +628,15 @@ def main():
 
     # ── 교차표 생성 ────────────────────────────────────────────────────────── #
     cross_data = build_cross_table(chat_types, chat_stats, cluster_labels)
+
+    # ── 토픽 리매핑 (--patterns 지정 시) ────────────────────────────────────── #
+    if args.patterns:
+        patterns_path = Path(args.patterns)
+        if patterns_path.exists():
+            print(f"\n🔄 Stage 2 sop_topic_map 기반 리매핑 중...")
+            cross_data = remap_to_topics(cross_data, str(patterns_path))
+        else:
+            print(f"  ⚠️  patterns.json 없음: {patterns_path} — 클러스터 기준 유지")
 
     # ── JSON 저장 ──────────────────────────────────────────────────────────── #
     json_path = output_dir / "cross_analysis.json"
