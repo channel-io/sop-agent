@@ -62,7 +62,7 @@ Read clustering results, then **immediately run enrichment** to extract full con
   # 1. Create minimal patterns.json from tags (cluster IDs only)
   python3 -c "
   import pandas as pd, json
-  tags = pd.read_excel('results/{company}/01_classification/{prefix}_tags.xlsx')
+  tags = pd.read_excel('results/{company}/01_clustering/{prefix}_tags.xlsx')
   data = {'metadata': {'company': '{company}', 'bootstrap': True}, 'clusters': []}
   for _, r in tags.iterrows():
       data['clusters'].append({'cluster_id': int(r['cluster_id']), 'label': r['label'], 'category': r['category'], 'cluster_size': int(r['cluster_size'])})
@@ -73,7 +73,7 @@ Read clustering results, then **immediately run enrichment** to extract full con
   # 2. Run enrichment to extract full conversation transcripts
   python3 scripts/enrich_patterns.py \
     --patterns results/{company}/02_extraction/patterns.json \
-    --messages results/{company}/01_classification/{prefix}_messages.csv \
+    --messages results/{company}/01_clustering/{prefix}_messages.csv \
     --output results/{company}/02_extraction/conversations_by_cluster.json \
     --n-samples 20
   ```
@@ -295,7 +295,7 @@ Save extraction results and run final enrichment.
   ```bash
   python3 scripts/enrich_patterns.py \
     --patterns results/{company}/02_extraction/patterns.json \
-    --messages results/{company}/01_classification/{company}_messages.csv \
+    --messages results/{company}/01_clustering/{company}_messages.csv \
     --output results/{company}/02_extraction/patterns_enriched.json \
     --n-samples 20
   ```

@@ -14,8 +14,8 @@ Stage 1~3 산출물을 모두 활용하여 ALF(AI 챗봇) 도입을 위한 **구
 
 **입력 파일:**
 ```
-01_classification/{company}_messages.csv   → 대화 원시 데이터 (cluster_id 포함)
-01_classification/{company}_tags.xlsx      → 클러스터 메타 (라벨/크기)
+01_clustering/{company}_messages.csv   → 대화 원시 데이터 (cluster_id 포함)
+01_clustering/{company}_tags.xlsx      → 클러스터 메타 (라벨/크기)
 02_extraction/patterns.json, faq.json      → 패턴/FAQ
 03_sop/*.sop.md + *_FLOWCHART.md          → SOP/플로우차트
 03_sop/metadata.json                       → SOP 커버리지 정보
@@ -98,15 +98,15 @@ results/{company}/
 ### 1. Gather Parameters
 
 **Actions:**
-1. Scan `results/` for company directories that contain both `01_classification/` and `03_sop/`
+1. Scan `results/` for company directories that contain both `01_clustering/` and `03_sop/`
 2. Use `AskUserQuestion` to collect all required inputs at once:
    - Target company (select from detected list or enter manually)
    - `monthly_volume` (required — do not assume)
    - `hourly_wage` (show default 15,100원, confirm or update)
    - `phase2_min_krw` / `phase2_max_krw` (outsourcing dev cost range)
 3. Auto-resolve file paths:
-   - `messages_csv` = `results/{company}/01_classification/{company}_messages.csv`
-   - `tags_xlsx` = `results/{company}/01_classification/{company}_tags.xlsx`
+   - `messages_csv` = `results/{company}/01_clustering/{company}_messages.csv`
+   - `tags_xlsx` = `results/{company}/01_clustering/{company}_tags.xlsx`
    - `sop_dir` = `results/{company}/03_sop`
    - `patterns_json` = `results/{company}/02_extraction/patterns.json`
    - `faq_json` = `results/{company}/02_extraction/faq.json`
@@ -121,8 +121,8 @@ results/{company}/
 ```
 ✅ Stage 5 파라미터 확인
   - Company: usimsa
-  - messages.csv: results/usimsa/01_classification/usimsa_messages.csv ✅
-  - tags.xlsx:    results/usimsa/01_classification/usimsa_tags.xlsx ✅
+  - messages.csv: results/usimsa/01_clustering/usimsa_messages.csv ✅
+  - tags.xlsx:    results/usimsa/01_clustering/usimsa_tags.xlsx ✅
   - SOP dir:      results/usimsa/03_sop ✅ (8 SOPs)
   - Monthly volume: 3,000건
   - Hourly wage: 15,100원 (기본값)
@@ -248,8 +248,8 @@ Each item MUST show two things separately:
 
 ```bash
 python3 scripts/analyze_dialogs.py \
-    --messages results/{company}/01_classification/{company}_messages.csv \
-    --tags     results/{company}/01_classification/{company}_tags.xlsx \
+    --messages results/{company}/01_clustering/{company}_messages.csv \
+    --tags     results/{company}/01_clustering/{company}_tags.xlsx \
     --patterns results/{company}/02_extraction/patterns.json \
     --output   results/{company}/05_sales_report/analysis
 ```

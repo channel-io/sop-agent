@@ -48,7 +48,7 @@ Scan available files and gather parameters through interactive selection.
 - You MUST extract company name from selected filename (e.g., "user_chat_assacom.xlsx" → "assacom")
 - You MUST suggest output_dir based on company name (e.g., "results/assacom")
 - You MUST verify .env file exists: `test -f .env`
-- You MUST create output subdirectory: `mkdir -p {output_dir}/01_classification`
+- You MUST create output subdirectory: `mkdir -p {output_dir}/01_clustering`
 - You MUST NOT proceed if input validation fails
 - Note: Python dependencies are validated automatically when script runs
 - You SHOULD display file size for selected file
@@ -97,7 +97,7 @@ Run the Python clustering script with Solar-pro agent tagging and monitor execut
   ```bash
   python3 scripts/pipeline.py \
     --input {input_file} \
-    --output {output_dir}/01_classification \
+    --output {output_dir}/01_clustering \
     --prefix {company} \
     --sample {sample_size} \
     --tagging-mode agent \
@@ -138,8 +138,8 @@ K=20: Silhouette=0.064
 
 [6/6] Saving results...
 ✓ Results saved:
-  - results/company/01_classification/company_clustered.xlsx (with tags)
-  - results/company/01_classification/company_tags.xlsx
+  - results/company/01_clustering/company_clustered.xlsx (with tags)
+  - results/company/01_clustering/company_tags.xlsx
 
 📊 Category Distribution:
   - 구매 상담: 214건 (21.4%)
@@ -157,9 +157,9 @@ Validate output files with tags and check data quality.
 
 **Constraints:**
 - You MUST verify both output files exist:
-  - `test -f {output_dir}/01_classification/{company}_clustered.xlsx`
-  - `test -f {output_dir}/01_classification/{company}_tags.xlsx`
-- You MUST check file sizes are non-zero: `ls -lh {output_dir}/01_classification/{company}_*.xlsx`
+  - `test -f {output_dir}/01_clustering/{company}_clustered.xlsx`
+  - `test -f {output_dir}/01_clustering/{company}_tags.xlsx`
+- You MUST check file sizes are non-zero: `ls -lh {output_dir}/01_clustering/{company}_*.xlsx`
 - You MUST read and display cluster distribution from tags file
 - You MUST check for data quality issues:
   - Empty cluster labels
@@ -180,8 +180,8 @@ Validate output files with tags and check data quality.
 **Expected Outputs:**
 ```
 ✅ Output files validated:
-  - 01_classification/company_clustered.xlsx (1.2 MB, 1,645 rows)
-  - 01_classification/company_tags.xlsx (12 KB, 10 rows)
+  - 01_clustering/company_clustered.xlsx (1.2 MB, 1,645 rows)
+  - 01_clustering/company_tags.xlsx (12 KB, 10 rows)
 
 📊 Cluster Distribution:
   1. AS_접수 (A/S): 120건 (7.3%)
@@ -199,7 +199,7 @@ Create comprehensive analysis report for Stage 2 guidance.
 
 **Constraints:**
 - You MUST read both output Excel files to gather statistics
-- You MUST create analysis report at: `{output_dir}/01_classification/analysis_report.md`
+- You MUST create analysis report at: `{output_dir}/01_clustering/analysis_report.md`
 - You MUST include the following sections:
   - Executive Summary (3-5 sentences in the detected language)
   - Cluster Distribution (category breakdown, size statistics)
@@ -270,7 +270,7 @@ Create comprehensive analysis report for Stage 2 guidance.
 **Expected Outputs:**
 ```
 ✅ Analysis report generated:
-   results/company/01_classification/analysis_report.md (15 KB)
+   results/company/01_clustering/analysis_report.md (15 KB)
 
 📋 Report highlights:
   - 10 clusters identified
@@ -305,9 +305,9 @@ Present results and confirm readiness for Stage 2.
   - Top Category: {category} ({percentage}%)
 
 📁 Output Files:
-  1. Clustered Data: {output_dir}/01_classification/{company}_clustered.xlsx
-  2. Cluster Tags: {output_dir}/01_classification/{company}_tags.xlsx
-  3. Analysis Report: {output_dir}/01_classification/analysis_report.md
+  1. Clustered Data: {output_dir}/01_clustering/{company}_clustered.xlsx
+  2. Cluster Tags: {output_dir}/01_clustering/{company}_tags.xlsx
+  3. Analysis Report: {output_dir}/01_clustering/analysis_report.md
 
 💡 Key Findings:
   - {finding_1}
