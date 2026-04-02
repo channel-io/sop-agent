@@ -179,11 +179,7 @@ results/{company}/
 │   ├── enrich_patterns.py           # Stage 2.5: 샘플 임베딩
 │   ├── analyze_dialogs.py           # Stage 5: 대화유형 분류
 │   ├── generate_heatmap.py          # Stage 5: 교차분석 히트맵
-│   ├── generate_metrics.py          # Stage 5: 메트릭 계산
-│   ├── generate_automation_analysis.py # Stage 5: 자동화 분석
-│   ├── generate_sales_config.py     # Stage 5: ROI 설정 생성
 │   ├── generate_sales_report.py     # Stage 5: 영업 보고서 생성
-│   ├── extract_sop_data.py          # Stage 5: SOP 데이터 추출
 │   ├── extract_alf_setup_data.py    # Stage 5: ALF 세팅 데이터 추출
 │   └── clustering/                  # 클러스터링 모듈
 │       ├── data_loader.py           #   Excel 로딩 (first_msg 우선 샘플링)
