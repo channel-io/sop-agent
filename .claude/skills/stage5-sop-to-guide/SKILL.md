@@ -32,8 +32,7 @@ Step 2: LLM — SOP + patterns/faq 기반 분석
     → rag_items.md            (RAG 필요 항목)
     ↓
 Step 3: 대화유형 분류 + 교차분석 + 자동화 분석
-    [Quick]    scripts/analyze_dialogs.py  (Solar-mini API 분류)
-    [Standard] 에이전트 배치 분류 (서브에이전트 5개 병렬)
+    scripts/analyze_dialogs.py  (Claude API 우선, Upstage Solar fallback)
     → cross_analysis.json + heatmap.png
     에이전트 직접 작성 (API 호출 없음)
     → automation_analysis.md  (자동화 가능성)
@@ -233,18 +232,13 @@ Each item MUST show two things separately:
 
 ### 3. Dialog Type Classification + Cross-Analysis + Automation Feasibility
 
-#### 3-A. 대화유형 분류 + 교차분석 — Quick / Standard 모드 선택
+#### 3-A. 대화유형 분류 + 교차분석
 
-> **Ask the user to select a mode.** Default is quick.
+`analyze_dialogs.py`를 실행하여 전체 대화를 7가지 유형으로 분류합니다.
 
-| 모드 | 분류 방법 | 소요시간 |
-|------|---------|---------|
-| **quick** | `analyze_dialogs.py` → Solar-mini API (건당 1호출) | ~5분 |
-| **standard** | Claude Code 에이전트가 배치로 직접 분류 | ~3분 |
-
----
-
-**[Quick 모드] Python 스크립트 실행**
+**분류 모델**: Claude API 우선 (ANTHROPIC_API_KEY 설정 시), 없으면 Upstage Solar fallback.
+- Claude Sonnet: 맥락 이해도 높음, 비용 ~$1-2/3000건
+- Upstage Solar-mini: 저비용 (~$0.05/3000건), 맥락 이해도 중간
 
 ```bash
 python3 scripts/analyze_dialogs.py \
@@ -257,42 +251,16 @@ python3 scripts/analyze_dialogs.py \
 > `--patterns` 옵션은 Stage 2의 `sop_topic_map`을 읽어 히트맵 Y축을 **Stage 1 클러스터가 아닌 Stage 2 재분류 토픽** 기준으로 집계합니다. 생략 시 Stage 1 클러스터 기준으로 동작합니다.
 
 Script produces:
-- `analysis/cross_analysis.json` — cluster × dialog_type 교차표 + 통계
+- `analysis/cross_analysis.json` — SOP토픽 × dialog_type 교차표 + 통계
 - `analysis/heatmap.png` — 히트맵 PNG
 
 **Expected Output:**
 ```
 ✅ analyze_dialogs.py complete
-  - Classified: 865 chats
+  - Classified: 3000 chats (Claude Sonnet)
   - heatmap.png saved
-  - Top types: 4.정책확인 36.4% / 3.단순실행 28.9% / 1.지식응답 16.3%
+  - Top types: 1.지식응답 31.0% / 2.정보조회 20.3% / 3.단순실행 15.7%
 ```
-
----
-
-**[Standard 모드] Claude Code 에이전트 배치 분류**
-
-Without using the Python script, the agent reads the message data directly and classifies in batches.
-
-1. `_messages.csv`를 Read 툴로 읽어 chatId별 첫 6턴 텍스트 추출
-2. `patterns.json`의 `sop_topic_map`을 Read 툴로 읽어 cluster_id → topic_id 매핑 테이블 생성
-3. **Task 툴로 5개 서브에이전트를 단일 메시지에서 동시에** 실행:
-   - 각 서브에이전트: ~200건 배치를 받아 7가지 유형으로 분류 후 JSON 반환
-   - prompt 예시: `아래 대화 목록을 읽고 각 chatId를 7가지 유형 중 하나로 분류하세요. 결과를 {"chatId": "유형"} JSON으로만 반환하세요. [대화 목록]`
-4. 5개 결과 합산 → **sop_topic_map 기준으로** 교차표 계산 → `cross_analysis.json` Write
-   - Y축은 Stage 1 클러스터가 아닌 **Stage 2 재분류 토픽** 기준
-   - partial 클러스터는 `estimated_records` 비율로 토픽에 분배
-   - `cross_analysis.json`에 `"y_axis": "topic"` 필드 포함
-5. `generate_heatmap.py`로 `heatmap.png` 생성:
-   ```bash
-   python3 scripts/generate_heatmap.py \
-       --input  results/{company}/05_sales_report/analysis/cross_analysis.json \
-       --output results/{company}/05_sales_report/analysis/heatmap.png
-   ```
-
-**Constraints:**
-- 5 batch Tasks MUST be launched simultaneously in a single message
-- Force the prompt to return classification results in JSON format only
 
 #### 3-B. automation_analysis.md 생성 (에이전트 직접 작성)
 
@@ -303,39 +271,46 @@ Read `cross_analysis.json` and **Stage 2's `response_strategies.json` together**
 
 | 데이터 | 역할 | 알 수 있는 것 |
 |--------|------|-------------|
-| `cross_analysis.json` | 의도 상한선 | 고객이 무엇을 원했나 (대화유형 분포) |
-| `response_strategies.json` (Stage 2) | 실제 해결 복잡도 | 해결하려면 실제로 무엇이 필요한가 (decision_flow, automation_opportunity) |
-| **결합** | **실질 자동화율** | 의도 상한선에서 해결 복잡도를 반영하여 현실적으로 조정 |
+| `cross_analysis.json` | 의도 상한선 (낙관적) | 고객이 무엇을 원했나 (대화유형 분포). 유형 1~4 합계 |
+| `response_strategies.json` (Stage 2) | 실제 해결 복잡도 | 해결하려면 실제로 무엇이 필요한가 (automation_opportunity, required_tools) |
+| **결합** | **조정값 (보수적)** | 의도 상한선에서 해결 복잡도·에스컬레이션 가능성을 반영하여 하향 조정 |
 
 > `response_strategies.json` 경로: `results/{company}/02_extraction/response_strategies.json`
 
 Include:
 1. **히트맵 해석** — 전체 대비 ≥10% 고빈도 셀의 의미 분석
-2. **클러스터별 2요소 결합 분석** (핵심 섹션) — 각 클러스터마다:
-   - 대화유형 분포에서 도출한 **의도 상한선**
-   - Stage 2 `decision_flow` 단계 수 + `automation_opportunity`에서 도출한 **실제 해결 복잡도**
-   - 두 요소를 결합한 **실질 자동화율** (완전자동화 / 부분자동화 / 자동화불가)
+2. **토픽별 2요소 결합 분석** (핵심 섹션) — 각 SOP 토픽마다:
+   - 대화유형 분포에서 도출한 **의도 상한선 (낙관적)** = 유형 1~4 합계
+   - Stage 2 `automation_opportunity` + `required_tools` 수에서 도출한 **해결 복잡도**
+   - 두 요소를 결합한 **조정값 (보수적)** — 에스컬레이션 가능성, 본인 확인 필요 여부, 케이스별 판단 필요 등을 반영하여 하향 조정
+   - **해결율 범위**: `조정값(보수적) ~ 의도 상한선(낙관적)` 형태로 표기
    - 조정 근거 한 줄 (예: "단순실행 60%이지만 사진 증빙 + 구매일 분기가 필수이므로 하향")
-   - 전체 클러스터 건수 가중 평균으로 최종 실질 자동화율 산출
-3. **대화유형별 ALF 처리 전략** — 7가지 유형 전부 커버 (비율%, 처리방법). 이 비율은 **"의도 상한선"** 임을 명시
-4. **Phase 우선순위** — 결합 분석 기반 실질 자동화율로 계산
-5. **클러스터별 인사이트** — 각 클러스터의 지배 유형 + 권장 ALF 전략
+   - 전체 토픽 건수 가중 평균으로 최종 해결율 범위 산출
+3. **대화유형별 ALF 처리 전략** — 7가지 유형 전부 커버 (비율%, 처리방법)
+4. **Phase 우선순위** — 보수적 조정값 기준으로 Phase 로드맵 작성
+5. **토픽별 인사이트** — 각 토픽의 지배 유형 + 권장 ALF 전략
+
+**해결율 표기 원칙:**
+- 단일 수치가 아닌 **조정값(보수적) ~ 의도 상한선(낙관적) 범위**로 항상 표기
+- 토픽별: `55% ~ 82.8%` 형태
+- 전체 가중 평균: `52.0% ~ 78.3%` 형태
+- ROI 계산 (Step 4)에는 **보수적 조정값**을 사용 (보수적 ROI 산출)
+- 보고서에는 "보수적 기준 ROI"임을 명시하고, 낙관적 시나리오의 추가 효과를 별도 기재
 
 **Constraints:**
-- Do NOT directly equate dialog type ratios from `cross_analysis.json` to automation rates — always combine with `decision_flow` and `automation_opportunity` from Stage 2 `response_strategies.json`
-- Reflect both the per-cluster `automation_opportunity` value (high/medium/low) and the number of `decision_flow` steps
-- **Always report "intent ceiling" and "actual automation rate" separately** — both numbers MUST appear in the output
-- Calculate the final overall automation rate as a cluster-count **weighted average** (simple average is not allowed)
+- Do NOT directly equate dialog type ratios from `cross_analysis.json` to automation rates — always combine with `automation_opportunity` from Stage 2 `response_strategies.json`
+- **Always report resolution as a range: "조정값(보수적) ~ 의도 상한선(낙관적)"** — single figures are NOT allowed
+- Calculate the final overall range as a topic-count **weighted average** (simple average is not allowed)
 - Include all 7 dialog types without omission
+- ROI calculation MUST use the conservative (조정값) figure, not the optimistic (의도 상한선)
 
 **Expected Output:**
 ```
 ✅ automation_analysis.md complete
-  - 의도 상한선 (대화유형 기준): XX.X%
-  - 실질 완전자동화율 (2요소 결합): X.X% (XXX건)
-  - 실질 부분자동화율 (ALF 관여→상담사 마무리): X.X% (XXX건)
-  - 자동화 불가: X.X% (XXX건)
-  - 주요 하향 조정 클러스터: {클러스터명} (사유)
+  - 해결율 범위: 조정값 XX.X% ~ 의도 상한선 XX.X%
+  - ROI 기준: 보수적 XX.X% (조정값)
+  - 자동화 불가 (상담사전환): X.X%
+  - 주요 하향 조정 토픽: {토픽명} (사유)
 ```
 
 ---
@@ -462,26 +437,29 @@ Compose `{company}_alf_implementation_guide.md` using all outputs.
 | **예상 커버리지** | 카테고리별 최저→최고 ALF 참여율 + 기여 분해 | Step 3, 5 |
 | **준비 사항** | CS팀·개발팀·채널톡 역할별 작업 목록 | LLM composition |
 
-**ALF 참여율 표기 (요약 섹션):**
-- 단일 수치가 아닌 **최저(1차 조회 API)~최고(2차 쓰기 API 포함) 범위**로 표기
+**해결율 표기 (요약 섹션):**
+- 단일 수치가 아닌 **조정값(보수적) ~ 의도 상한선(낙관적) 범위**로 표기
+  - 조정값(보수적) = automation_analysis.md의 실질 자동화율 (에스컬레이션·복잡도 반영 하향 조정)
+  - 의도 상한선(낙관적) = 대화유형 1~4 합계 (모든 의도가 완벽히 해결된다는 가정)
 - ALF 설정 구성 테이블: `상태` 열에 `✅ 세팅 완료` 또는 `🔧 구축 필요` 표시
   - 세팅 완료 여부는 Step 1에서 사용자에게 확인하여 반영
 
 **카테고리별 예상 처리 결과 표기:**
-- `ALF 참여 최저→최고`, `최고 추가 자동화 근거`, `직접 상담사 최저→최고` 열 포함
-- 최저 = 1차 조회 API만 / 최고 = 2차 쓰기 API(접수·해제·설정) 추가 시
+- `해결율 (보수적~낙관적)`, `하향 조정 사유`, `직접 상담사` 열 포함
+- 보수적 = 에스컬레이션·본인확인·케이스별 판단 반영 / 낙관적 = 의도 상한선
 
 **Constraints:**
-- ALF participation rate MUST NOT be a single figure — always express as a **min~max range**
+- Resolution rate MUST NOT be a single figure — always express as **조정값(보수적) ~ 의도 상한선(낙관적) range**
+- ROI calculation MUST use the conservative (조정값) figure
 - Use the setup completion status exactly as confirmed in Step 1
-- Use ONLY Step 4 script values for ROI figures
+- Use ONLY Step 4 script values for ROI figures (based on conservative rate)
 
 **Expected Output:**
 ```
 ✅ Final report complete
   - File: results/{company}/{company}_alf_implementation_guide.md
   - Sections: 6
-  - ALF 참여율: 최저 {X}% → 최고 {Y}~{Z}%
+  - 해결율: 보수적 {X}% ~ 낙관적 {Y}% (ROI는 보수적 기준)
 ```
 
 ---
