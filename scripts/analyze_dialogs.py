@@ -230,7 +230,21 @@ def classify_chunk(chunk: list, retry: int = 3) -> dict:
         try:
             raw = _call_llm(prompt, max_tokens=len(chunk) * 25).strip()
 
-            # JSON 파싱
+            # JSON 파싱 — 마크다운 코드블록 제거 (Claude가 ```json ... ``` 로 감싸는 경우)
+            import re as _re
+            json_match = _re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, _re.DOTALL)
+            if json_match:
+                raw = json_match.group(1)
+            elif raw.startswith('{'):
+                # 순수 JSON이지만 뒤에 추가 텍스트가 붙은 경우
+                brace_count = 0
+                for idx, ch in enumerate(raw):
+                    if ch == '{': brace_count += 1
+                    elif ch == '}': brace_count -= 1
+                    if brace_count == 0:
+                        raw = raw[:idx+1]
+                        break
+
             parsed = _json.loads(raw)
             result = {}
             for i, (chat_id, _) in enumerate(chunk):
