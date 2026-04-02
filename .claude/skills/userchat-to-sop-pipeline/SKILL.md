@@ -125,9 +125,9 @@ Run clustering via `/stage1-clustering` skill with auto-detected parameters.
 ```
 
 **Outputs (Auto-detected for next stages):**
-- `results/{company}/{company}_clustered.xlsx` - Full dataset with cluster assignments
-- `results/{company}/{company}_tags.xlsx` - Cluster summary
-- `results/{company}/analysis_report.md` - Comprehensive analysis for Stage 2
+- `results/{company}/01_clustering/{company}_clustered.xlsx` - Full dataset with cluster assignments
+- `results/{company}/01_clustering/{company}_tags.xlsx` - Cluster summary
+- `results/{company}/01_clustering/analysis_report.md` - Comprehensive analysis for Stage 2
 
 **After Stage 1 Completion:**
 Pipeline automatically detects `company` and `output_base_dir` from Stage 1 outputs:
@@ -137,9 +137,9 @@ output_base_dir="results/{company}"  # From Stage 1 output path
 company="{company}"                   # From Stage 1 output prefix
 
 # Validate Stage 1 outputs exist
-✓ {output_base_dir}/{company}_clustered.xlsx
-✓ {output_base_dir}/{company}_tags.xlsx
-✓ {output_base_dir}/analysis_report.md
+✓ {output_base_dir}/01_clustering/{company}_clustered.xlsx
+✓ {output_base_dir}/01_clustering/{company}_tags.xlsx
+✓ {output_base_dir}/01_clustering/analysis_report.md
 ```
 
 **Quality Checks:**
@@ -159,7 +159,7 @@ company="{company}"                   # From Stage 1 output prefix
 - You MUST skip to Step 3 immediately
 
 **IF auto_proceed=false:**
-- You MUST display: "📋 Review analysis report: $output_base_dir/analysis_report.md"
+- You MUST display: "📋 Review analysis report: $output_base_dir/01_clustering/analysis_report.md"
 - You MUST ask via AskUserQuestion: "Stage 1 완료. Stage 2 (Pattern Extraction)로 진행할까요?"
 - You MUST wait for user confirmation before proceeding
 
@@ -175,13 +175,13 @@ Use LLM to extract patterns, FAQs, and response strategies from clusters.
 /stage2-extraction
 
 # Parameters (auto-detected from Stage 1):
-# - clustering_output_dir: $output_base_dir
+# - clustering_output_dir: $output_base_dir/01_clustering
 # - company: $company
 # - n_samples_per_cluster: 20
 ```
 
 **Inputs:**
-- Stage 1 outputs: `clustered_data.xlsx`, `tags.xlsx`, `analysis_report.md` (if exists)
+- Stage 1 outputs (in `$output_base_dir/01_clustering/`): `{company}_clustered.xlsx`, `{company}_tags.xlsx`, `analysis_report.md`
 
 **Outputs:**
 - `patterns.json` - Extracted patterns per cluster
