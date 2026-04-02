@@ -135,542 +135,135 @@ TS_사용중_하드웨어불량및수리.sop.md
 - You MAY merge similar patterns into single 케이스 under 해결책 안내
 - You MUST ensure each SOP has a clear, single responsibility
 
-**SOP Structure Template:**
-```markdown
-# {sop_title}
-
-## Overview
-[What this SOP does, when to use it, key features]
-
-## Parameters
-### Required
-- **inquiry_type**: Type of customer inquiry
-- **customer_tier**: Customer service level (if applicable)
-
-### Optional
-- **escalation_needed**: Pre-identified escalation flag
-- **language**: Response language (default: Korean, also supports Japanese)
-
-## Steps
-### 1. Classify Inquiry
-[Identify inquiry type using keywords]
-
-### 2. [Pattern-Based Step]
-[Handle specific pattern, e.g., "Check Warranty Status"]
-
-### 3. Provide Response
-[Generate appropriate response based on inquiry type]
-
-### 4. Escalate if Needed
-[Escalation logic]
-
-## Examples
-[Concrete usage scenarios]
-
-## Troubleshooting
-[Common issues and solutions]
-```
-
 **Design Decisions:**
 
-1. **Parameters vs. Dynamic Classification:**
-   - If 5-10 clear inquiry types: Use `inquiry_type` parameter
-   - If 20+ overlapping types: Use keyword-based dynamic classification in Step 1
+1. **Step Granularity:**
+   - Group related patterns: "충전_AS", "배터리_AS" → single Case under 해결책 안내
+   - Keep distinct scenarios separate: each Case should represent a clearly different customer situation
 
-2. **Step Granularity:**
-   - Group related patterns: "충전_AS", "배터리_AS" → "Handle A/S Inquiries"
-   - Keep complex processes separate: "배송_조회" as standalone step
-
-3. **Constraint Levels:**
+2. **Constraint Levels:**
    - MUST: Critical business rules (warranty verification, PII handling)
    - SHOULD: Best practices (check history first)
    - MAY: Optional enhancements (offer related products)
 
-### 3. Write Overview Section
+### 3. Extract Concrete Details from Enriched Conversations
 
-Create a clear, concise overview of the SOP's purpose and capabilities.
-
-**Constraints:**
-- You MUST describe what the SOP accomplishes
-- You MUST specify when to use this SOP
-- You SHOULD list key features or capabilities (3-5 bullets)
-- You SHOULD mention the company and industry context
-- You MAY include expected outcomes or benefits
-
-**Overview Template:**
-```markdown
-## Overview
-This SOP guides {company} customer support agents in handling customer inquiries
-across {N} major categories: {categories}. It provides step-by-step workflows for
-common inquiry types, automated response generation, and escalation rules.
-
-**Use Cases:**
-- Handling customer inquiries via chat, email, or phone
-- Providing product information and troubleshooting
-- Processing A/S requests and tracking status
-- Managing order and delivery inquiries
-
-**Key Features:**
-- Keyword-based inquiry classification
-- Pattern-matched response templates
-- Escalation triggers for complex cases
-- Integration with {systems} (e.g., AS system, order tracking)
-
-**Expected Outcomes:**
-- Reduced response time (target: <2 minutes for common inquiries)
-- Consistent response quality across agents
-- Higher first-contact resolution rate (target: >80%)
-```
-
-**Example (Channel Corp.):**
-```markdown
-## Overview
-This SOP guides Channel Corp. customer support agents in handling customer inquiries
-for consumer electronic products. It covers
-5 major categories: A/S (48%), General Inquiries (19%), Delivery (12%),
-Order Management (10%), and System Issues (10%).
-
-**Use Cases:**
-- Responding to customer chat inquiries (primary channel)
-- Handling product questions, troubleshooting, and A/S requests
-- Processing order changes, returns, and delivery tracking
-- Escalating complex technical or policy issues
-
-**Key Features:**
-- Automated inquiry classification using keyword matching
-- Pre-built response templates for 52 common inquiry patterns
-- Decision trees for A/S troubleshooting (charging, defects)
-- Escalation rules to specialized teams (AS center, logistics)
-
-**Expected Outcomes:**
-- <2 min response time for 80% of inquiries
-- >85% first-contact resolution for common patterns
-- Consistent brand voice and service quality
-```
-
-### 4. Define Parameters
-
-Define SOP parameters that control workflow behavior.
+Before writing any SOP, mine the enriched conversation data for concrete, actionable details.
 
 **Constraints:**
-- You MUST include at least one Required parameter
-- You MUST define `inquiry_type` parameter if <15 distinct types
-- You SHOULD include `customer_tier` if service levels exist
-- You SHOULD use enums for categorical parameters
-- You MAY include optional parameters for advanced features
-- You MUST provide clear descriptions and examples for each parameter
+- You MUST read `patterns_enriched.json` → each cluster's `sample_conversations` → `turns`
+- You MUST extract the following from actual manager (agent) messages in turns:
+  1. **Internal tool URLs/paths** — e.g., `biz-crm.dmz.channel.io/accounts/{accountId}?tab=settings`
+  2. **Step-by-step instructions agents actually gave** — copy near-verbatim, don't paraphrase
+  3. **Warning messages agents sent** — e.g., "구글 로그인 버튼으로 다시 접속하시면 재연동됩니다"
+  4. **Specific UI navigation paths** — e.g., "좌측 하단 프로필 이미지 클릭 > [계정 설정]"
+  5. **Conditional branches agents used** — e.g., "비밀번호를 설정한 적 없는 경우 → 비밀번호 찾기 안내"
+- You MUST also extract from user messages:
+  1. **Common customer expressions** — how customers describe the problem in their own words
+  2. **Frequently asked follow-up questions**
+- You MUST use `tone_and_manner_samples` for the 톤앤매너 section
+- You SHOULD create a per-topic extraction note before writing each SOP:
 
-**Parameter Types:**
-
-1. **inquiry_type** (if applicable):
-```markdown
-### Required
-- **inquiry_type** (required): Type of customer inquiry
-  - Format: enum
-  - Values: `a_s_request`, `delivery_inquiry`, `product_question`, `order_change`, `complaint`
-  - Example: `a_s_request`
-  - Description: Determines which workflow path to follow
+```
+Topic: Setting_Account_구글연동해제
+Source clusters: [3, 7]
+Extracted from conversations:
+  - Admin URL: biz-crm.dmz.channel.io/accounts/{accountId}?tab=settings
+  - Agent instruction: "로그인 화면에서 '구글 로그인' 버튼이 아닌, 이메일 입력란에 기존 이메일 주소를 직접 입력"
+  - Warning: "구글 로그인 버튼으로 다시 접속하면 재연동됨"
+  - UI path: "좌측 하단 프로필 이미지 클릭 > [계정 설정] > '로그인 계정'"
+  - Customer expression: "이메일 변경이 안 돼요", "구글 로그인 해제해주세요"
+  - Condition: "비밀번호 미설정 → 비밀번호 찾기 안내"
 ```
 
-2. **customer_tier** (if service levels exist):
-```markdown
-- **customer_tier** (optional, default: "standard"): Customer service level
-  - Format: enum
-  - Values: `standard`, `premium`, `vip`
-  - Example: `premium`
-  - Description: Affects response priority and escalation rules
-```
+**Why this matters:**
+- Without concrete details, SOPs become generic (e.g., "내부 어드민에서 확인" instead of actual URL)
+- The enriched data contains real agent responses — use them as the foundation, not as mere reference
 
-3. **Dynamic Classification Alternative** (if too many types):
-```markdown
-### Required
-- **customer_message** (required): Customer's inquiry message
-  - Format: string
-  - Example: "충전이 안 되는데 어떻게 해야 하나요?"
-  - Description: Full customer message for keyword-based classification
+### 4. Write SOP Content (해결책 안내 — Case-by-Case)
 
-### Optional
-- **customer_history** (optional): Previous interaction history
-  - Format: array of messages
-  - Example: `["3개월 전 AS 접수", "충전기 교체 완료"]`
-  - Description: Used to provide context-aware responses
-```
-
-**Parameter Selection Guide:**
-- **Few clear types (5-10)**: Use `inquiry_type` enum
-- **Many types (15+)**: Use `customer_message` with dynamic classification
-- **Service tiers**: Always include `customer_tier`
-- **Multi-language**: Include `language` parameter
-
-### 5. Write Step-by-Step Workflow
-
-Create detailed steps using extracted patterns and response strategies.
+This is the most critical step. Each SOP's 해결책 안내 section must contain **Case-by-Case breakdowns** with production-ready detail.
 
 **Constraints:**
-- You MUST include at least 3 steps
-- You MUST use RFC 2119 keywords (MUST, SHOULD, MAY, MUST NOT)
-- You MUST write each step with clear sub-tasks
-- You SHOULD include decision logic (IF/THEN) where applicable
-- You SHOULD reference FAQ answers in response steps
-- You MAY include code snippets or pseudo-code for complex logic
-- You MUST ensure steps flow logically (classify → analyze → respond → escalate)
-- **For Troubleshooting (TS) workflows**: You MUST follow the **비파괴적 순서 (Non-Destructive Order)** principle
-  - Order troubleshooting steps from least to most invasive (최소 침습 → 최대 침습)
-  - Minimize data loss risk and action scope at each step
+- You MUST follow the template structure exactly:
+  - HT SOPs → `templates/HT_template.md` (목적 → 주의사항 → 내용 → 톤앤매너 → 에스컬레이션)
+  - TS SOPs → `templates/TS_template.md` (목적 → 주의사항 → 문제해결프로세스 → 톤앤매너 → 에스컬레이션)
+- You MUST NOT use Overview/Parameters/Steps/Examples structure — that is for Agent Skills, not SOP documents
+- **For TS SOPs**: You MUST follow the **비파괴적 순서 (Non-Destructive Order)** principle
+  - Order troubleshooting steps from least to most invasive
   - Include "✅ 해결되었는지 확인" checkpoint after each troubleshooting step
-  - Example order: Connection check → Refresh → Update → Restart app → Restart device → Reinstall
   - Reference: See `templates/TS_template.md` for detailed guidance
 
-**Step Structure Template:**
-```markdown
-### {N}. {Step Title}
+#### Case Quality Requirements (MUST follow for every Case)
 
-{Brief description of what this step accomplishes}
+Each Case under 해결책 안내 MUST include ALL of the following elements:
 
-**Constraints:**
-- You MUST {critical requirement}
-- You SHOULD {recommended practice}
-- You MAY {optional enhancement}
-- You MUST NOT {prohibited action}
+| # | Required Element | Bad Example (generic) | Good Example (production-ready) |
+|---|-----------------|----------------------|-------------------------------|
+| 1 | **Case 헤더 with 빈도** | `Case 1: 인증코드 미수신 (빈도: 높음)` | `Case 1: 로그인 이메일/계정 변경을 위한 해제 (빈도: 높음 — 전체의 66.7%)` |
+| 2 | **주요 상황 서술** | `주요 원인: 이메일 수신거부` | `주요 상황: 고객이 계정 설정에서 로그인 이메일을 변경하려 하나, 구글 연동 상태라 이메일이 잠겨있어 수정이 불가한 경우` |
+| 3 | **Step별 안내 멘트 (블록 인용)** | `"이메일을 확인해 주세요"` | 3줄 이상의 구체적 안내 + 번호 매긴 절차 (아래 예시 참조) |
+| 4 | **내부 도구 경로** | `내부 어드민에서 확인` | `**경로:** biz-crm.dmz.channel.io/accounts/{accountId}?tab=settings` |
+| 5 | **UI 네비게이션 경로** | `설정에서 변경` | `좌측 하단 프로필 이미지 클릭 > **[계정 설정]** > **'로그인 계정'** 항목` |
+| 6 | **조건 분기 (IF/THEN)** | (없음) | `변경이 안 되는 경우, 구글 재연동 여부를 확인하고 Step 2부터 다시 진행` |
+| 7 | **⚠️ 경고/주의 문구** | (없음) | `⚠️ **중요:** '구글 로그인' 버튼으로 다시 로그인하시면 구글 연동이 재설정됩니다` |
+| 8 | **완료 확인 Step** | (없음) | `"이메일 변경이 정상적으로 완료되셨나요? 확인 한 번만 부탁드립니다."` |
+| 9 | **Case 간 참조** | (없음) | `Case 1의 Step 2~4와 동일하게 처리한다` |
 
-**Process:**
-1. {Sub-task 1}
-2. {Sub-task 2}
-   - IF {condition}: {action}
-   - ELSE: {alternative action}
-3. {Sub-task 3}
+#### Step 안내 멘트 작성 기준
 
-**Tools Required:**
-- {Tool 1}
-- {Tool 2}
-
-**Expected Output:**
-{What this step produces}
-```
-
-**Example Steps (Channel Corp. Customer Support):**
+각 Step의 안내 멘트는 블록 인용(>) 형식으로, **고객에게 보내는 실제 메시지** 수준으로 작성한다:
 
 ```markdown
-## Steps
+**Step 3. 재로그인 안내**
 
-### 1. Classify Inquiry Type
+> "구글 연동 해제가 완료되었습니다. 아래 순서대로 진행해 주세요.
+>
+> 1. 현재 채널톡에서 **로그아웃**해 주세요.
+> 2. 로그인 화면에서 **'구글 로그인' 버튼이 아닌**, 이메일 입력란에 기존 이메일 주소를 직접 입력하여 로그인해 주세요.
+> 3. 로그인 후 좌측 하단 프로필 이미지 클릭 > **[계정 설정]** > **'로그인 계정'** 항목에서 원하시는 이메일로 변경해 주세요.
+>
+> ⚠️ **중요:** '구글 로그인' 버튼으로 다시 로그인하시면 구글 연동이 재설정되어 이메일 변경이 다시 불가능해집니다. 반드시 이메일을 직접 입력하는 방식으로 로그인해 주세요."
+```
 
-Analyze the customer message to determine inquiry type using keyword matching.
+**Where do these details come from?**
+- **내부 도구 경로, UI 경로**: `patterns_enriched.json` → `sample_conversations` → manager turns에서 추출
+- **안내 멘트**: 실제 상담원이 보낸 메시지를 기반으로 재구성 (near-verbatim, not paraphrased)
+- **조건 분기**: 대화에서 상담원이 "~인 경우", "~하셨다면" 등으로 분기한 패턴 추출
+- **경고 문구**: 상담원이 "주의", "중요", "꼭" 등의 키워드와 함께 보낸 메시지에서 추출
+- **빈도 데이터**: `patterns.json`의 cluster_size와 패턴 비율에서 계산
+
+#### Enriched Data 미보유 시 (내부 도구 경로 등이 대화에 없는 경우)
+
+대화 데이터에서 구체적인 내부 도구 경로나 어드민 URL이 발견되지 않는 경우:
+- `{내부_도구_경로}` 같은 플레이스홀더를 사용하고 주석으로 표시: `<!-- TODO: 내부 어드민 경로 확인 필요 -->`
+- 절대로 임의의 URL이나 경로를 지어내지 않는다
+- 안내 멘트, 조건 분기, 경고 문구는 대화 데이터에서 항상 추출 가능하므로 반드시 포함한다
+
+### 5. Write 톤앤매너 Section
+
+Extract tone and manner from enriched data and write the section.
 
 **Constraints:**
-- You MUST scan the message for keywords from `keywords.json` taxonomy
-- You SHOULD check multiple keyword categories (A/S, 배송, 제품)
-- You SHOULD assign primary and secondary types if multiple matches
-- You MAY use customer history to disambiguate unclear inquiries
-- You MUST assign "general_inquiry" if no keywords match
+- You MUST use `tone_and_manner_samples` from `patterns_enriched.json` as the foundation
+- You MUST include: 인사말, 공감 표현, 마무리 인사, 금지 표현
+- You MUST use actual agent messages from the data, not generic templates
+- You SHOULD include 금지 표현 with 대체 표현 pairs (table format)
 
 **Process:**
-1. Extract keywords from customer message (NLP or simple matching for the detected language)
-2. Match against keyword taxonomy:
-   - A/S keywords: 충전, 수리, 고장, AS, 교체 → `a_s_request`
-   - 배송 keywords: 배송, 조회, 송장, 언제도착 → `delivery_inquiry`
-   - 제품 keywords: 사용법, 스펙, 기능, 구매 → `product_question`
-   - 주문 keywords: 취소, 변경, 반품, 주소 → `order_change`
-3. Assign inquiry_type based on highest keyword match score
-4. Flag `escalation_needed = true` if keywords include: 환불, 불만, 화남, 법적조치
+1. Read `tone_and_manner_samples` for the topic's source clusters
+2. Group by category: greeting, empathy, closing, proactive, informative
+3. Select 2-3 best examples per category
+4. Identify negative patterns from conversations (agent responses that caused re-inquiry or escalation)
+5. Create 금지/대체 표현 pairs
 
-**Tools Required:**
-- Keyword taxonomy from `keywords.json`
-- (Optional) tokenizer for the detected language for better keyword extraction
-
-**Expected Output:**
-- `inquiry_type`: one of [a_s_request, delivery_inquiry, product_question, order_change, complaint]
-- `matched_keywords`: list of matched keywords
-- `confidence`: high/medium/low
-
----
-
-### 2. Handle A/S Requests
-
-Process A/S (after-sales service) inquiries using troubleshooting patterns.
+### 6. Write 에스컬레이션 Section
 
 **Constraints:**
-- You MUST execute this step only if `inquiry_type == a_s_request`
-- You MUST determine A/S sub-type: 충전, 수리, 교체
-- You MUST provide troubleshooting steps before escalating to AS center
-- You SHOULD check warranty status if customer provides purchase date
-- You MAY offer immediate replacement if within 7-day exchange period
-- You MUST NOT promise repair time without checking AS center capacity
-
-**Process:**
-1. Determine A/S sub-type from keywords:
-   - 충전 keywords → Charging issue workflow
-   - 고장, 작동안함 → General defect workflow
-   - 교체, 새제품 → Replacement workflow
-
-2. **IF charging issue (비파괴적 순서):**
-   a. Provide troubleshooting steps (from FAQ faq_2_1):
-      - Step 1: Check cable and adapter connection → ✅ Ask customer to test and report
-      - Step 2: Clean charging port → ✅ Ask customer to test and report
-      - Step 3: Test with different cable → ✅ Ask customer to test and report
-   b. After each step, ask customer to confirm if issue is resolved
-   c. IF still failing after all steps → Escalate to AS center
-   d. **Important**: Follow non-destructive order (최소 침습 → 최대 침습)
-
-3. **IF general defect:**
-   a. Ask for symptom details (noise, no power, etc.)
-   b. Check warranty status:
-      - IF <1 year: Offer free repair
-      - IF >1 year: Inform of paid repair (10,000 KRW)
-   c. Escalate to AS center for inspection
-
-4. **IF replacement request:**
-   a. Check purchase date:
-      - IF <7 days: Direct exchange via customer center
-      - IF 7-30 days: AS center inspection required
-      - IF >30 days: Repair only (no replacement)
-   b. Provide escalation contact info
-
-**Tools Required:**
-- FAQ database (faq.json)
-- Warranty lookup system (customer purchase history)
-- AS center contact info (1234-5678)
-
-**Expected Output:**
-- Troubleshooting guidance provided (charging checklist, symptom questions)
-- Warranty status confirmed
-- Escalation initiated if needed
-
----
-
-### 3. Handle Delivery Inquiries
-
-Provide delivery tracking information and resolve delivery issues.
-
-**Constraints:**
-- You MUST execute this step only if `inquiry_type == delivery_inquiry`
-- You MUST retrieve tracking number from order system
-- You SHOULD provide estimated delivery date if order is recent
-- You MAY automate this entirely with tracking link
-- You MUST escalate to logistics team if delivery is delayed >3 days
-
-**Process:**
-1. Retrieve order ID from customer (ask if not provided)
-2. Look up tracking information in order system
-3. Provide response based on delivery status:
-   - **Shipped**: "운송장 번호는 {tracking_no}입니다. [조회 링크]로 확인하세요. 예상 도착: {eta}"
-   - **Preparing**: "상품 준비 중입니다. {expected_ship_date}에 발송 예정입니다."
-   - **Delivered**: "배송 완료되었습니다 ({delivery_date}). 수령하지 못하셨다면 배송 기사에게 연락하세요."
-   - **Delayed**: Escalate to logistics team
-
-**Tools Required:**
-- Order management system
-- Carrier tracking API (CJ, 로젠, 우체국)
-
-**Expected Output:**
-- Tracking number and link provided
-- Delivery status and ETA communicated
-- Escalation if delayed
-
----
-
-### 4. Provide Response
-
-Generate appropriate response using pattern-matched templates.
-
-**Constraints:**
-- You MUST use response strategy from `response_strategies.json` for the inquiry type
-- You MUST personalize response with customer name (if available)
-- You SHOULD use friendly, professional tone in the detected language
-- You SHOULD include next steps or follow-up actions
-- You MAY offer related information (FAQs, product links)
-- You MUST NOT use overly formal or robotic language
-
-**Process:**
-1. Load response template for inquiry type from `response_strategies.json`
-2. Fill in placeholders:
-   - `[고객명]` → customer name or "고객님"
-   - `[제품명]` → product name from order history
-   - `[AS센터 번호]` → 1234-5678
-   - `[예상기간]` → estimated timeframe (3-5일, etc.)
-3. Add empathy statement if complaint or frustration detected
-4. Include call-to-action or next steps
-5. Append signature: "감사합니다. Channel Corp. 고객센터"
-
-**Example Response (Charging A/S):**
-```
-안녕하세요, [고객명]님!
-
-충전 문제로 불편을 드려 죄송합니다. 다음 단계를 먼저 확인해주세요:
-
-1. 케이블과 어댑터가 제품과 전원에 제대로 연결되었는지 확인
-2. 충전 포트에 이물질이나 먼지가 없는지 확인
-3. 가능하면 다른 케이블로 교체 테스트
-
-위 단계를 시도하신 후에도 문제가 계속되면 AS 접수를 도와드리겠습니다.
-AS 센터: 1234-5678 (평일 09:00-18:00)
-
-추가 문의 사항이 있으시면 언제든지 말씀해주세요.
-감사합니다.
-
-Channel Corp. 고객센터
-```
-
-**Expected Output:**
-- Complete, ready-to-send response message in the detected language
-- Personalized with customer and product details
-- Includes actionable next steps
-
----
-
-### 5. Escalate if Needed
-
-Escalate to specialized teams when required.
-
-**Constraints:**
-- You MUST escalate if `escalation_triggers` from response strategy are met
-- You MUST provide customer with escalation target contact info
-- You MUST log escalation in CRM system
-- You SHOULD set escalation priority based on customer tier and urgency
-- You SHOULD provide customer with expected response time
-- You MUST NOT close conversation until escalation is confirmed
-
-**Escalation Triggers** (from `response_strategies.json`):
-1. Customer attempted troubleshooting 3+ times
-2. Warranty verification required
-3. Delivery delayed >3 days
-4. Customer uses complaint keywords (환불, 불만, 법적)
-5. Technical issue beyond first-line support
-
-**Process:**
-1. Identify escalation target:
-   - A/S issues → AS Center (1234-5678)
-   - Delivery issues → Logistics team (internal)
-   - Complaints → Customer service manager
-   - Technical issues → Product team
-2. Create escalation ticket in CRM
-3. Provide customer with:
-   - Escalation target contact info
-   - Ticket number
-   - Expected response time (AS: 1-2일, Complaints: 24시간)
-4. Set follow-up reminder
-5. Confirm escalation: "담당 팀에 전달했습니다. {expected_time} 내로 연락드리겠습니다."
-
-**Expected Output:**
-- Escalation ticket created
-- Customer notified with ticket number and timeline
-- Follow-up scheduled
-```
-
-### 6. Create Examples Section
-
-Write concrete usage examples demonstrating the SOP in action.
-
-**Constraints:**
-- You MUST use realistic customer messages (from clustered.xlsx samples)
-- You SHOULD cover different inquiry types
-- You SHOULD show both simple and complex scenarios
-- You MUST format examples clearly with Input → Process → Output structure
-
-**Example Structure:**
-```markdown
-## Examples
-
-### Example 1: {Scenario Name}
-
-**Scenario**: {Brief description}
-
-**Input:**
-- inquiry_type: {type}
-- customer_message: "{actual customer message}"
-- customer_tier: {tier}
-
-**Process:**
-1. [Step 1] {What happens}
-2. [Step 2] {What happens}
-3. [Step 3] {What happens}
-
-**Output:**
-```
-{Final response to customer}
-```
-
-**Notes**: {Any special considerations or learnings}
-```
-
-**Example 1:**
-```markdown
-### Example 1: Charging Issue with Troubleshooting
-
-**Scenario**: Customer reports charging problem for electronic product.
-
-**Input:**
-- customer_message: "충전이 안 되는데 어떻게 해야 하나요?"
-- customer_tier: "standard"
-
-**Process:**
-1. [Classify Inquiry] Matched keywords: ["충전"] → inquiry_type = `a_s_request`
-2. [Handle A/S] Sub-type: charging issue
-   - Provide troubleshooting checklist (FAQ faq_2_1)
-3. [Provide Response] Use charging troubleshooting template
-
-**Output:**
-```
-안녕하세요, 고객님!
-
-충전 문제로 불편을 드려 죄송합니다. 다음 단계를 먼저 확인해주세요:
-
-1. 케이블과 어댑터가 제품과 전원에 제대로 연결되었는지 확인
-2. 충전 포트에 이물질이나 먼지가 없는지 확인
-3. 가능하면 다른 케이블로 교체 테스트
-
-위 단계를 시도하신 후에도 문제가 계속되면 AS 접수를 도와드리겠습니다.
-AS 센터: 1234-5678 (평일 09:00-18:00)
-
-감사합니다.
-Channel Corp. 고객센터
-```
-
-**Notes**: Most charging issues are resolved at Step 2 (troubleshooting). Only ~20% escalate to AS center.
-```
-
-### 7. Add Troubleshooting Section
-
-Document common issues and failure modes.
-
-**Constraints:**
-- You MUST include troubleshooting section if SOP has >3 potential failure points
-- You SHOULD document issues encountered during testing or known edge cases
-- You SHOULD provide clear solutions or workarounds
-- You MAY reference external documentation
-- You MUST format as Issue → Cause → Solution
-
-**Troubleshooting Template:**
-```markdown
-## Troubleshooting
-
-### Issue 1: {Issue Title}
-
-**Symptom**: {What the user observes}
-
-**Cause**: {Why this happens}
-
-**Solution**:
-1. {Step 1}
-2. {Step 2}
-
-**Prevention**: {How to avoid this issue}
-
----
-
-### Issue 2: Cannot Classify Inquiry
-
-**Symptom**: Step 1 classification returns "general_inquiry" for all messages
-
-**Cause**: Customer message has no keywords matching the taxonomy
-
-**Solution**:
-1. Manually review message for intent
-2. Use semantic search or LLM classification as fallback
-3. Ask clarifying question: "AS, 배송, 또는 제품 문의 중 어느 것과 관련이 있나요?"
-
-**Prevention**: Expand keyword taxonomy with more synonyms and variations
-```
+- You MUST include an escalation table with: 상황, 에스컬레이션 대상, 전달 정보, 예상 응답 시간
+- You MUST include 에스컬레이션 시 고객 안내 멘트 (from actual agent messages)
+- You SHOULD include 에스컬레이션 요청 양식 (내부용) if internal tool paths are available
+- Escalation targets MUST be extracted from actual conversations (not invented)
 
 ### 8. Save Agent SOP Documents
 
@@ -700,11 +293,29 @@ Write results/{company}/03_sop/HT_{topic3}.sop.md
 ```
 
 **Post-Save Validation (per file):**
+
+**구조 체크:**
 - [ ] 템플릿 섹션 모두 포함 (목적, 주의사항, 내용 or 문제해결프로세스, 톤앤매너, 에스컬레이션)
-- [ ] 구체적인 내용 포함 (APN 값, 실제 설정 경로, 실제 응답 문구 등)
-- [ ] No placeholder text (e.g., "[TODO]", "[내용 추가]")
+- [ ] Overview/Parameters/Steps/Examples 구조를 사용하지 않았는가
 - [ ] 파일명이 내용을 잘 반영
 - [ ] File size reasonable (100-500 lines per SOP)
+
+**Case 품질 체크 (해결책 안내의 각 Case별):**
+- [ ] Case 헤더에 정량적 빈도 포함 (e.g., "전체의 66.7%")
+- [ ] `주요 상황` 서술이 고객 시나리오 기반인가 (not 기술적 원인 나열)
+- [ ] 각 Step에 블록 인용(>) 형식의 안내 멘트가 있는가
+- [ ] 안내 멘트가 3줄 이상이고 번호 매긴 절차를 포함하는가
+- [ ] 내부 도구 경로 or `{placeholder}` + TODO 주석이 있는가
+- [ ] UI 네비게이션 경로가 구체적인가 (e.g., "좌측 하단 > [설정]")
+- [ ] 조건 분기(IF/THEN)가 최소 1개 있는가
+- [ ] ⚠️ 경고/주의 문구가 해당되는 Case에 포함되어 있는가
+- [ ] 완료 확인 Step이 있는가 ("~되셨나요?")
+- [ ] Case 간 참조가 적절히 사용되었는가 (중복 방지)
+
+**데이터 기반 체크:**
+- [ ] 구체적인 내용이 enriched 대화에서 추출된 것인가 (임의 생성 아님)
+- [ ] 톤앤매너의 예시가 실제 상담원 메시지 기반인가
+- [ ] No placeholder text (e.g., "[TODO]", "[내용 추가]") — `{내부_도구_경로}` + TODO 주석은 허용
 
 **Output Summary (완료 후 출력):**
 ```
@@ -812,37 +423,47 @@ Write results/{company}/03_sop/metadata.json
 
 ### File 1: `{company}_support.sop.md`
 
-Complete Agent SOP following standardized format.
+SOP document following HT/TS template structure.
 
-**Structure:**
+**TS SOP Structure (문제 해결):**
 ```markdown
 # {SOP Title}
 
-## Overview
-[150-200 words]
-
-## Parameters
-### Required
-- parameter1: description
-### Optional
-- parameter2: description
-
-## Steps
-### 1. Step Title
+## 메타데이터
+| 항목 | 내용 |
+|------|------|
+| SOP ID | {ID} |
+| 분류 | {분류} |
 ...
 
-## Examples
-### Example 1: ...
-### Example 2: ...
+## 1. 목적
+## 2. 주의사항
+## 3. 문제 해결 프로세스
+### 3-1. 처리 흐름 개요
+### 3-2. 문제 상황 확인
+### 3-3. 해결책 안내
+#### Case 1: {시나리오} (빈도: 높음 — 전체의 XX%)
+  **Step 1~N** with 블록 인용 안내 멘트, 내부 도구 경로, 조건 분기, 완료 확인
+#### Case 2: ...
+## 4. 톤앤매너
+## 5. 해결이 안되면 (에스컬레이션)
+## 6. 관련 SOP
+## 7. 데이터 분석 정보
+```
 
-## Troubleshooting
-### Issue 1: ...
+**HT SOP Structure (정보 안내):**
+```markdown
+# {SOP Title}
 
-## Related Documentation
-[Links to related docs]
-
-## Notes
-[Additional information]
+## 메타데이터
+## 1. 목적
+## 2. 주의사항
+## 3. 내용
+### (주제별 Case 구조 — 동일한 디테일 요구사항 적용)
+## 4. 톤앤매너
+## 5. 해결이 안되면 (에스컬레이션)
+## 6. 관련 SOP
+## 7. 데이터 분석 정보
 ```
 
 ### File 2: `metadata.json`
@@ -860,35 +481,32 @@ SOP metadata and statistics.
 
 ## Troubleshooting
 
-### Issue 1: Generated SOP is too generic
+### Issue 1: Generated SOP Cases are too generic
 
-**Symptom**: Steps lack specificity, could apply to any company
-
-**Solution:**
-- Include more company-specific details from extraction
-- Use actual product names, contact numbers, internal systems
-- Reference specific policies (warranty periods, refund rules)
-- Incorporate brand voice from sample messages
-
-### Issue 2: Steps are too granular
-
-**Symptom**: 15+ steps, overwhelming to follow
+**Symptom**: Cases lack specificity — "내부 어드민에서 확인", no UI paths, no concrete agent messages
 
 **Solution:**
-- Group related sub-tasks under fewer main steps (aim for 5-7)
-- Use sub-sections within steps for detail
-- Move edge cases to Troubleshooting section
-- Consider splitting into multiple SOPs (e.g., A/S SOP, Delivery SOP)
+- Re-read `patterns_enriched.json` → `sample_conversations` → manager turns
+- Extract actual URLs, UI paths, agent response templates from the conversations
+- If not found in data, use `{placeholder}` + `<!-- TODO -->` — never invent details
 
-### Issue 3: Parameters don't match workflow
+### Issue 2: Cases use "주요 원인" instead of "주요 상황"
 
-**Symptom**: Steps don't reference defined parameters
+**Symptom**: Case descriptions list technical causes rather than customer scenarios
 
 **Solution:**
-- Review Step 5 constraints: ensure steps check parameter values
-- Add conditional logic: "IF inquiry_type == X, THEN..."
-- Remove unused parameters
-- Add missing parameters referenced in steps
+- Rewrite from customer's perspective: "고객이 [X]를 하려 하나, [Y] 상태라 [Z]가 불가한 경우"
+- Extract customer expressions from user turns in enriched data
+- Technical causes go into the Step's internal notes, not the Case header
+
+### Issue 3: Missing validation steps and conditional branches
+
+**Symptom**: Cases are linear (Step 1 → 2 → 3 → done) without confirmation or branching
+
+**Solution:**
+- Add "완료 확인" step after each major action: "~되셨나요?"
+- Add conditional branches: "안 되는 경우 → [다른 조치]" or "→ Step N부터 다시 진행"
+- Add ⚠️ warnings where re-occurrence is likely (e.g., 재연동, 재발 가능성)
 
 ## Related Documentation
 
@@ -964,17 +582,17 @@ The generated SOP should be reusable across:
 
 ### Quality Checklist
 
-Before finalizing SOP:
-- [ ] All patterns from extraction are covered
-- [ ] FAQ answers are incorporated into response templates
-- [ ] Response strategies map to Steps
-- [ ] Escalation rules are clearly defined
-- [ ] Examples use real customer messages
+Before finalizing each SOP:
+- [ ] All patterns from extraction are covered in Cases
+- [ ] FAQ answers are incorporated into Step 안내 멘트
+- [ ] Response strategies reflected in 톤앤매너 section
+- [ ] Escalation rules clearly defined with table format
+- [ ] Each Case passes the 9-point Case Quality Requirements (Step 4)
+- [ ] 안내 멘트 are based on actual agent messages (not generic)
 - [ ] Text is natural and professional in the detected language
 - [ ] No company-specific secrets or PII exposed
-- [ ] RFC 2119 keywords used correctly
-- [ ] All sections are complete (no TODOs)
-- [ ] Metadata is accurate
+- [ ] Template structure followed (HT or TS) — no Overview/Parameters/Steps/Examples
+- [ ] All sections complete (no empty TODOs except allowed `{placeholder}` patterns)
 
 ### Deployment Readiness
 
