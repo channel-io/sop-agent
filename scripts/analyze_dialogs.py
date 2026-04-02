@@ -18,8 +18,8 @@ messages.csv와 tags.xlsx를 읽어 대화유형을 LLM으로 분류하고
   "[고객] ...\n[상담사] ..." 형태로 연결하여 LLM에 전달.
 
 입력:
-  {result_dir}/01_classification/{prefix}_messages.csv
-  {result_dir}/01_classification/{prefix}_tags.xlsx
+  {result_dir}/01_clustering/{prefix}_messages.csv
+  {result_dir}/01_clustering/{prefix}_tags.xlsx
 
 출력:
   {output_dir}/cross_analysis.json
@@ -27,14 +27,14 @@ messages.csv와 tags.xlsx를 읽어 대화유형을 LLM으로 분류하고
 
 Usage:
     python3 scripts/analyze_dialogs.py \\
-        --messages results/usimsa/01_classification/usimsa_messages.csv \\
-        --tags     results/usimsa/01_classification/usimsa_tags.xlsx \\
+        --messages results/usimsa/01_clustering/usimsa_messages.csv \\
+        --tags     results/usimsa/01_clustering/usimsa_tags.xlsx \\
         --output   results/usimsa/05_sales_report
 
     # 병렬 처리 수 조정 (기본 5)
     python3 scripts/analyze_dialogs.py \\
-        --messages results/usimsa/01_classification/usimsa_messages.csv \\
-        --tags     results/usimsa/01_classification/usimsa_tags.xlsx \\
+        --messages results/usimsa/01_clustering/usimsa_messages.csv \\
+        --tags     results/usimsa/01_clustering/usimsa_tags.xlsx \\
         --output   results/usimsa/05_sales_report \\
         --workers 3
 """

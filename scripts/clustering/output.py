@@ -1,6 +1,13 @@
 import pandas as pd
 import os
 from pathlib import Path
+from .pii_masker import mask_dataframe
+
+# PII 마스킹 대상 컬럼 (이 컬럼에 고객 개인정보가 포함될 수 있음)
+_PII_COLUMNS = [
+    'summarizedMessage', 'enhanced_text', 'plainText', 'name',
+    'title', 'description', 'url', 'tags',
+]
 
 def save_results(df, tags_df, output_dir='results', prefix='output'):
     os.makedirs(output_dir, exist_ok=True)
@@ -9,6 +16,11 @@ def save_results(df, tags_df, output_dir='results', prefix='output'):
     tags_df.to_excel(tags_file, index=False)
 
     result_df = df.merge(tags_df, on='cluster_id', how='left', suffixes=('', '_tag'))
+
+    # PII 마스킹 적용
+    pii_cols = [c for c in _PII_COLUMNS if c in result_df.columns]
+    result_df = mask_dataframe(result_df, columns=pii_cols)
+
     result_file = Path(output_dir) / f"{prefix}_clustered.xlsx"
     result_df.to_excel(result_file, index=False)
 
@@ -41,6 +53,10 @@ def save_messages(df_chat, df_msg, output_dir='results', prefix='output'):
     # Create mapping: chat_id -> cluster_id
     chat_to_cluster = df_chat.set_index('id')['cluster_id'].to_dict()
     sample_messages['cluster_id'] = sample_messages[id_col].map(chat_to_cluster)
+
+    # PII 마스킹 적용
+    pii_cols = [c for c in _PII_COLUMNS if c in sample_messages.columns]
+    sample_messages = mask_dataframe(sample_messages, columns=pii_cols)
 
     # Save to CSV
     messages_file = Path(output_dir) / f"{prefix}_messages.csv"
