@@ -2,6 +2,7 @@
 PROGRESS.md
 CLAUDE.md
 README_ver_rosa.md
+AGENTS.md
 
 # Python
 __pycache__/
@@ -29,6 +30,7 @@ archive/
 results/
 !results/.gitkeep
 legacy/
+agent-sops/
 
 # Tests
 tests/
@@ -52,3 +54,4 @@ data/
 # Documentation
 docs/
 sops/
+templates/examples/
