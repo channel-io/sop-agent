@@ -180,6 +180,25 @@ Extracted from conversations:
 - Without concrete details, SOPs become generic (e.g., "내부 어드민에서 확인" instead of actual URL)
 - The enriched data contains real agent responses — use them as the foundation, not as mere reference
 
+**⚠️ Extraction Guardrails (반드시 준수):**
+
+1. **예외 조치 vs 표준 절차 구분**: 대화에서 상담원이 수행한 조치가 **표준 절차**인지 **비상/예외 조치**인지 판단해야 한다. 다음 패턴은 예외 조치일 가능성이 높으므로 SOP의 표준 Step으로 포함하지 않는다:
+   - 보안 인증 정보(인증코드, OTP 등)를 채팅/문자로 직접 전달하는 행위
+   - 내부 시스템을 우회하는 임시 조치 (예: 수동 차단 해제 후 재차단 발생)
+   - 상담원이 "한 번만 더 시도해보고" 등의 시행착오를 반복하는 구간
+   - 에스컬레이션 후 Tier2가 처리한 특수 조치
+   → 이런 조치가 대화에 있더라도 SOP에는 **에스컬레이션 조건**으로만 기재한다.
+
+2. **FAQ 문구의 과잉 일반화 금지**: FAQ에 "세일즈팀에 문의", "기술팀에 확인" 등의 표현이 있다고 해서 해당 토픽의 **모든 Case를 에스컬레이션으로** 처리하지 않는다.
+   - FAQ의 에스컬레이션 문구는 **해당 FAQ 질문의 맥락**에만 적용한다.
+   - 같은 토픽 내에서도 CX팀이 직접 처리 가능한 Case와 에스컬레이션이 필요한 Case를 분리한다.
+   - 에스컬레이션 기준이 불명확한 경우, `<!-- TODO: 에스컬레이션 기준 확인 필요 -->` 주석을 남긴다.
+
+3. **문의 유형 혼재 방지**: 하나의 Case 안에 서로 다른 문의 유형의 Step이 섞이지 않도록 한다.
+   - 각 Case는 **하나의 고객 시나리오**만 다뤄야 한다.
+   - 대화 원문에서 여러 이슈가 연속으로 발생한 경우, 각 이슈를 별도 Case로 분리한다.
+   - Case 간 참조("Case N 참조")로 연결하되, Step을 혼합하지 않는다.
+
 ### 4. Write SOP Content (해결책 안내 — Case-by-Case)
 
 This is the most critical step. Each SOP's 해결책 안내 section must contain **Case-by-Case breakdowns** with production-ready detail.

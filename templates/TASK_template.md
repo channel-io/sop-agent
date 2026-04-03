@@ -1,11 +1,11 @@
 ```mermaid
 flowchart TD
-    START([시작]) --> A{분기 조건}
-    A -->|조건 A| B[[API 이름\n반환 필드 확인]]:::apiClass
-    A -->|조건 B| C[처리 단계]
-    B --> D{결과 분기}
-    D -->|성공| E([완료])
-    D -->|실패/조건| F([상담사 연결])
+    START(["시작"]) --> A{"분기 조건"}
+    A -->|"조건 A"| B[["API 이름<br/>반환 필드 확인"]]:::apiClass
+    A -->|"조건 B"| C["처리 단계"]
+    B --> D{"결과 분기"}
+    D -->|"성공"| E(["완료"])
+    D -->|"실패/조건"| F(["상담사 연결"])
     C --> E
 
     classDef successClass fill:#d4edda,stroke:#28a745,stroke-width:2px
@@ -15,6 +15,12 @@ flowchart TD
     classDef processClass fill:#e7f3ff,stroke:#0056b3,stroke-width:2px
     classDef apiClass     fill:#fff0c0,stroke:#e6a817,stroke-width:2px,stroke-dasharray:5 5
 ```
+
+> **Mermaid 작성 규칙:**
+> - 모든 노드 텍스트는 반드시 `""` 따옴표로 감쌀 것 — `{}`가 Mermaid 다이아몬드 예약 문법과 충돌
+> - 줄바꿈은 `<br/>` 사용 (`\n` 금지)
+> - API 변수는 중괄호 없이 표기: `orderId` (~~`{orderId}`~~ 금지)
+> - 엣지 라벨도 `""` 따옴표로 감쌀 것: `-->|"라벨"|`
 
 ---
 

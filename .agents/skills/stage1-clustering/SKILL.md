@@ -20,7 +20,7 @@ This sop executes automated clustering and tagging of customer support chat data
 - **tagging_mode** (optional, default: "agent"): Cluster tagging method:
   - "agent": Solar-pro unified tagging (5-15 sec, industry-adaptive, recommended)
   - "api": Solar-mini independent tagging (30 sec, basic quality)
-  - "skip": Skip tagging for manual Codex tagging later
+  - "skip": Skip tagging for manual Claude tagging later
 - **k** (optional, default: "auto"): Number of clusters - use "auto" for optimal selection or integer for fixed count
 - **k_range** (optional, default: "8,10,12,15,20,25"): K values to test when k="auto"
 - **umap** (optional, default: true): UMAP 차원 축소 적용 (4096D → 30D, silhouette 대폭 개선)

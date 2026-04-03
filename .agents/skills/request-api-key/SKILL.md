@@ -74,7 +74,7 @@ Pete may reply in the thread or directly in the group — check both.
 **Constraints:**
 - You MUST run: `python3 -c "import sys; sys.path.insert(0, '.'); from scripts.config import UPSTAGE_API_KEY; print('OK')"`
 - If OK → inform the user setup is complete, suggest `/stage1-clustering` or `/userchat-to-sop-pipeline`
-- If fails → tell user to restart Codex
+- If fails → tell user to restart Claude Code
 
 **Expected Output:**
 ```
@@ -91,4 +91,4 @@ Pete may reply in the thread or directly in the group — check both.
 
 ### Python verification fails
 - Check `.env` is in project root: `cat .env`
-- Ask user to restart Codex and retry
+- Ask user to restart Claude Code and retry

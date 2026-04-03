@@ -1,6 +1,6 @@
-# Codex Skills
+# Claude Code Skills
 
-이 디렉토리에는 Codex Skills가 위치합니다.
+이 디렉토리에는 Claude Code Skills가 위치합니다.
 
 ## Skills
 
