@@ -82,19 +82,14 @@ source venv/bin/activate
 
 # 패키지 설치
 echo ""
-echo "[3/4] 패키지 설치 중..."
+echo "[3/5] 패키지 설치 중..."
 pip install --upgrade pip -q
 pip install -r requirements.txt -q
-echo "  ✅ 기본 패키지 설치 완료"
-
-# matplotlib 설치 (히트맵 생성용)
-echo "  matplotlib 설치 중... (히트맵 생성에 필요)"
-pip install matplotlib -q
-echo "  ✅ matplotlib 설치 완료"
+echo "  ✅ 패키지 설치 완료"
 
 # .env 파일 설정
 echo ""
-echo "[4/4] 환경 변수 설정..."
+echo "[4/5] 환경 변수 설정..."
 if [ ! -f ".env" ]; then
   cp .env.example .env
   echo "  ✅ .env 파일이 생성되었습니다."
@@ -105,6 +100,26 @@ fi
 
 # 필요 디렉토리 생성
 mkdir -p data results cache
+touch data/.gitkeep results/.gitkeep cache/.gitkeep
+
+# 설치 검증
+echo ""
+echo "[5/5] 설치 검증 중..."
+VERIFY_FAILED=0
+python3 -c "import pandas; import numpy; import sklearn; import openpyxl; import tqdm; import dotenv" 2>/dev/null
+if [ $? -eq 0 ]; then
+  echo "  ✅ 핵심 패키지 정상"
+else
+  echo "  ⚠️  일부 패키지 import 실패 — pip install -r requirements.txt 재실행 필요"
+  VERIFY_FAILED=1
+fi
+
+python3 -c "import sentence_transformers" 2>/dev/null
+if [ $? -eq 0 ]; then
+  echo "  ✅ 로컬 임베딩 모델 (sentence-transformers) 정상"
+else
+  echo "  ⚠️  sentence-transformers 미설치 — Solar API fallback 사용"
+fi
 
 echo ""
 echo "=========================================="
