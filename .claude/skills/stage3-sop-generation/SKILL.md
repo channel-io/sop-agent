@@ -95,7 +95,7 @@ For each topic in `sop_topic_map`, generate one SOP file.
 
 **Process per SOP:**
 
-1. **Pick 3-5 conversations** from `patterns_enriched.json` that belong to this topic (prefer diverse scenarios)
+1. **Pick (Case 수 × 2) conversations** from `patterns_enriched.json` that belong to this topic (prefer diverse scenarios). E.g., Case 4개 → 8건, Case 2개 → 4건.
 2. **Simulate:** For each conversation, walk through the SOP as if you were the agent:
    - Does the SOP cover this customer's question?
    - Can you follow the steps to reach the same resolution the real agent reached?
