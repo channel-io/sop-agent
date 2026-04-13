@@ -45,10 +45,13 @@ Step 5: LLM — 태스크 정의 + API 요건 정의서
     → 04_tasks/TASK{N}_{이름}.md   (태스크별 Mermaid 플로우차트 + 요약표)
     → {company}_api_requirements.md  (개발팀용 API 요건 정의서)
     ↓
-Step 6: LLM — 최종 통합 보고서 (ALF 도입 가이드)
+Step 6: LLM — QA 테스트 시나리오 생성
+    → qa_scenarios.md  (지식/태스크별 구체+추상 쿼리 + 영향도)
+    ↓
+Step 7: LLM — 최종 통합 보고서 (ALF 도입 가이드)
     → {company}_alf_implementation_guide.md
     ↓
-Step 7: LLM — 최종 분석 리포트 (Rosa 프레임워크)
+Step 8: LLM — 최종 분석 리포트 (Rosa 프레임워크)
     → {company}_analysis_report.md
 ```
 
@@ -67,7 +70,8 @@ results/{company}/
     ├── analysis/
     │   ├── cross_analysis.json     ← 교차분석 원시 데이터
     │   ├── heatmap.png             ← 상담주제 × 대화유형 히트맵
-    │   └── automation_analysis.md  ← 자동화 가능성 분석
+    │   └── automation_analysis.md  ← 자동화 가능성 분석 (4-Layer 모델)
+    ├── qa_scenarios.md              ← QA 테스트 시나리오 (지식 + 태스크)
     ├── sales_report_config.json
     └── {company}_analysis_report.md ← 최종 분석 리포트 (Rosa 프레임워크)
 ```
@@ -98,36 +102,52 @@ results/{company}/
 
 **Actions:**
 1. Scan `results/` for company directories that contain both `01_clustering/` and `03_sop/`
-2. Use `AskUserQuestion` to collect all required inputs at once:
+2. **Auto-estimate `monthly_volume`** from Stage 1 data:
+   a. Read `results/{company}/01_clustering/pipeline_summary.md` → extract original UserChat count (e.g., "원본 데이터: UserChat 4,969건")
+   b. Read the first 2 and last 2 lines of `results/{company}/01_clustering/{company}_messages.csv` → extract `createdAt` min/max to determine date range
+   c. Calculate: `estimated_monthly = original_count / (date_range_days / 30)`
+   d. If `pipeline_summary.md` is missing, fall back to row count of `{company}_clustered.xlsx` (note this is the sampled count)
+3. Use `AskUserQuestion` to collect all required inputs at once — show the estimated monthly volume as the suggested default:
    - Target company (select from detected list or enter manually)
-   - `monthly_volume` (required — do not assume)
+   - `monthly_volume` (show estimated value + calculation basis, user confirms or overrides)
    - `hourly_wage` (show default 15,100원, confirm or update)
    - `phase2_min_krw` / `phase2_max_krw` (outsourcing dev cost range)
-3. Auto-resolve file paths:
+4. Auto-resolve file paths:
    - `messages_csv` = `results/{company}/01_clustering/{company}_messages.csv`
    - `tags_xlsx` = `results/{company}/01_clustering/{company}_tags.xlsx`
    - `sop_dir` = `results/{company}/03_sop`
    - `patterns_json` = `results/{company}/02_extraction/patterns.json`
    - `faq_json` = `results/{company}/02_extraction/faq.json`
 
+**Monthly Volume Estimation Logic:**
+```
+원본 건수: pipeline_summary.md → "원본 데이터: UserChat {N}건"
+날짜 범위: messages.csv → createdAt min ~ max → {D}일
+추정 월간량: {N} × (30 / {D}) = {estimated}건/월
+
+예) 원본 4,969건 / 30일 범위 → 약 4,969건/월
+```
+
 **Constraints:**
 - You MUST collect ALL inputs in Step 1 — no further questions after this step
-- You MUST NOT assume `monthly_volume` — always confirm with the user
+- You MUST present the estimated `monthly_volume` with its calculation basis — user confirms or overrides
+- If the estimate is based on sampled data (not original count), clearly note "(샘플 기반 추정, 실제보다 낮을 수 있음)"
 - If using defaults, mark them as `(기본값)` in the final report
+- If using the auto-estimate, mark as `(데이터 기반 추정)` in the final report
 - **ALF 세팅 현황**: 규칙·지식·태스크 중 이미 완료된 항목을 확인 → Step 6 ALF 가이드의 ✅/🔧 표시에 반영
 
 **Expected Output:**
 ```
 ✅ Stage 5 파라미터 확인
-  - Company: usimsa
-  - messages.csv: results/usimsa/01_clustering/usimsa_messages.csv ✅
-  - tags.xlsx:    results/usimsa/01_clustering/usimsa_tags.xlsx ✅
-  - SOP dir:      results/usimsa/03_sop ✅ (8 SOPs)
-  - Monthly volume: 3,000건
+  - Company: kmong_v2
+  - messages.csv: results/kmong_v2/01_clustering/kmong_messages.csv ✅
+  - tags.xlsx:    results/kmong_v2/01_clustering/kmong_tags.xlsx ✅
+  - SOP dir:      results/kmong_v2/03_sop ✅ (11 SOPs)
+  - Monthly volume: ~4,969건/월 (데이터 기반 추정: 원본 4,969건 / 30일)
   - Hourly wage: 15,100원 (기본값)
   - Handling time: 8분 (기본값)
   - Phase 2 dev cost: 100~300만원
-  - Output: results/usimsa/05_sales_report/
+  - Output: results/kmong_v2/05_sales_report/
 ```
 
 ---
@@ -416,7 +436,48 @@ Define the APIs used in tasks so that the development team can review them.
 
 ---
 
-### 6. Final Integrated Report (LLM)
+### 6. Generate QA Test Scenarios (LLM)
+
+Generate ALF QA test scenarios from Knowledge items and Task definitions.
+
+**Template:** `templates/QA_SCENARIOS_template.md`
+**Output:** `results/{company}/05_sales_report/qa_scenarios.md`
+
+**Source files:**
+- `alf_setup/rag_items.md` (Step 2) — one QA scenario per knowledge item
+- `04_tasks/*.md` (Step 5) — one QA scenario per task
+- `03_sop/*.sop.md` — ALF layer tags from each Case
+
+**Per knowledge item, generate:**
+1. Concrete query (specific, realistic customer utterance from SOP/FAQ data)
+2. Abstract query (same intent, different/shorter wording)
+3. Expected answer summary (from SOP Case content)
+4. Impact score: 상 if SOP Case frequency ≥20%, 중 if ≥5%, 하 otherwise
+5. ALF layer tag (from source SOP Case)
+
+**Per task, generate:**
+1. Concrete query (specific action request)
+2. Abstract query (different wording)
+3. Expected action flow (from task definition)
+4. Impact score (same criteria)
+5. Required API
+6. Task conflict check (note if a Knowledge item could handle the same query)
+
+**Constraints:**
+- MUST generate exactly 2 queries per item (1 concrete + 1 abstract)
+- Queries MUST use natural customer language, not technical terms
+- Expected answers MUST come from SOP content, not invented
+- MUST follow `templates/QA_SCENARIOS_template.md` format
+
+**Expected Output:**
+```
+✅ Step 6 complete
+  - qa_scenarios.md: 지식 {X}건 + 태스크 {Y}건 = 총 {Z}개 시나리오
+```
+
+---
+
+### 7. Final Integrated Report (LLM)
 
 Compose `{company}_alf_implementation_guide.md` using all outputs.
 
@@ -437,10 +498,12 @@ Compose `{company}_alf_implementation_guide.md` using all outputs.
 | **예상 커버리지** | 카테고리별 최저→최고 ALF 참여율 + 기여 분해 | Step 3, 5 |
 | **준비 사항** | CS팀·개발팀·채널톡 역할별 작업 목록 | LLM composition |
 
-**해결율 표기 (요약 섹션):**
-- 단일 수치가 아닌 **조정값(보수적) ~ 의도 상한선(낙관적) 범위**로 표기
-  - 조정값(보수적) = automation_analysis.md의 실질 자동화율 (에스컬레이션·복잡도 반영 하향 조정)
-  - 의도 상한선(낙관적) = 대화유형 1~4 합계 (모든 의도가 완벽히 해결된다는 가정)
+**시간 절감 표기 (요약 섹션):**
+- **4-Layer ALF 관여 모델** 사용:
+  - 완전 해결 (100% 시간 절감) / 승인노드 (~90%) / 초벌 상담 (70-80%) / 주제 분류 (30-50%)
+- 단일 수치가 아닌 **보수적 ~ 낙관적 범위**로 표기
+  - 보수적 = automation_analysis.md의 시간 절감 가중평균 (에스컬레이션·복잡도 반영 하향 조정)
+  - 낙관적 = 대화유형 1~4 합계 기준 최대 시간 절감
 - ALF 설정 구성 테이블: `상태` 열에 `✅ 세팅 완료` 또는 `🔧 구축 필요` 표시
   - 세팅 완료 여부는 Step 1에서 사용자에게 확인하여 반영
 
