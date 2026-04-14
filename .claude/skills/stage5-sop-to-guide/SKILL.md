@@ -45,13 +45,10 @@ Step 5: LLM — 태스크 정의 + API 요건 정의서
     → 04_tasks/TASK{N}_{이름}.md   (태스크별 Mermaid 플로우차트 + 요약표)
     → {company}_api_requirements.md  (개발팀용 API 요건 정의서)
     ↓
-Step 6: LLM — QA 테스트 시나리오 생성
-    → qa_scenarios.md  (지식/태스크별 구체+추상 쿼리 + 영향도)
-    ↓
-Step 7: LLM — 최종 통합 보고서 (ALF 도입 가이드)
+Step 6: LLM — 최종 통합 보고서 (ALF 도입 가이드)
     → {company}_alf_implementation_guide.md
     ↓
-Step 8: LLM — 최종 분석 리포트 (Rosa 프레임워크)
+Step 7: LLM — 최종 분석 리포트 (Rosa 프레임워크)
     → {company}_analysis_report.md
 ```
 
@@ -71,7 +68,6 @@ results/{company}/
     │   ├── cross_analysis.json     ← 교차분석 원시 데이터
     │   ├── heatmap.png             ← 상담주제 × 대화유형 히트맵
     │   └── automation_analysis.md  ← 자동화 가능성 분석 (4-Layer 모델)
-    ├── qa_scenarios.md              ← QA 테스트 시나리오 (지식 + 태스크)
     ├── sales_report_config.json
     └── {company}_analysis_report.md ← 최종 분석 리포트 (Rosa 프레임워크)
 ```
@@ -436,48 +432,7 @@ Define the APIs used in tasks so that the development team can review them.
 
 ---
 
-### 6. Generate QA Test Scenarios (LLM)
-
-Generate ALF QA test scenarios from Knowledge items and Task definitions.
-
-**Template:** `templates/QA_SCENARIOS_template.md`
-**Output:** `results/{company}/05_sales_report/qa_scenarios.md`
-
-**Source files:**
-- `alf_setup/rag_items.md` (Step 2) — one QA scenario per knowledge item
-- `04_tasks/*.md` (Step 5) — one QA scenario per task
-- `03_sop/*.sop.md` — ALF layer tags from each Case
-
-**Per knowledge item, generate:**
-1. Concrete query (specific, realistic customer utterance from SOP/FAQ data)
-2. Abstract query (same intent, different/shorter wording)
-3. Expected answer summary (from SOP Case content)
-4. Impact score: 상 if SOP Case frequency ≥20%, 중 if ≥5%, 하 otherwise
-5. ALF layer tag (from source SOP Case)
-
-**Per task, generate:**
-1. Concrete query (specific action request)
-2. Abstract query (different wording)
-3. Expected action flow (from task definition)
-4. Impact score (same criteria)
-5. Required API
-6. Task conflict check (note if a Knowledge item could handle the same query)
-
-**Constraints:**
-- MUST generate exactly 2 queries per item (1 concrete + 1 abstract)
-- Queries MUST use natural customer language, not technical terms
-- Expected answers MUST come from SOP content, not invented
-- MUST follow `templates/QA_SCENARIOS_template.md` format
-
-**Expected Output:**
-```
-✅ Step 6 complete
-  - qa_scenarios.md: 지식 {X}건 + 태스크 {Y}건 = 총 {Z}개 시나리오
-```
-
----
-
-### 7. Final Integrated Report (LLM)
+### 6. Final Integrated Report (LLM)
 
 Compose `{company}_alf_implementation_guide.md` using all outputs.
 
@@ -528,6 +483,7 @@ Compose `{company}_alf_implementation_guide.md` using all outputs.
 ---
 
 ### 7. Final Analysis Report — Rosa Framework (LLM)
+
 
 **목적**: `templates/최종 분석 리포트 템플릿.md` 구조를 따르는 상세 분석 리포트 생성.
 ALF 패키지(`_alf_package.md`)가 영업/배포 중심이라면, 이 보고서는 **데이터 분석 중심**으로
