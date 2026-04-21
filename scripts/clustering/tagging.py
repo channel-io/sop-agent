@@ -6,6 +6,8 @@ from ..config import (
     UPSTAGE_BASE_URL,
     ANTHROPIC_API_KEY,
     ANTHROPIC_MODEL,
+    PRISM_API_KEY,
+    PRISM_BASE_URL,
     LLM_MODEL,
     LLM_TEMPERATURE,
     LLM_SAMPLES_PER_CLUSTER
@@ -14,8 +16,8 @@ from ..lang_config import L
 
 
 def _use_claude():
-    """Claude API 사용 가능 여부"""
-    return bool(ANTHROPIC_API_KEY)
+    """Prism Gateway 경유 Claude API 사용 가능 여부"""
+    return bool(PRISM_API_KEY or ANTHROPIC_API_KEY)
 
 
 def _get_upstage_client():
@@ -23,12 +25,17 @@ def _get_upstage_client():
 
 
 def _call_llm(prompt, llm_model=None):
-    """Claude 우선, 없으면 Upstage fallback"""
+    """Prism Gateway 경유 Claude 우선, 없으면 Upstage fallback"""
     if _use_claude():
         import anthropic
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        api_key = PRISM_API_KEY or ANTHROPIC_API_KEY
+        base_url = PRISM_BASE_URL if PRISM_API_KEY else None
+        client = anthropic.Anthropic(
+            api_key=api_key,
+            **({"base_url": base_url} if base_url else {})
+        )
         model = llm_model or ANTHROPIC_MODEL
-        print(f"   LLM: Claude ({model})")
+        print(f"   LLM: Claude ({model}) via {'Prism' if PRISM_API_KEY else 'Anthropic'}")
         response = client.messages.create(
             model=model,
             max_tokens=4096,
