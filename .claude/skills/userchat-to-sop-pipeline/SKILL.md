@@ -52,6 +52,10 @@ Stage 7: Deployment Scenario (LLM) [~5 min]
 - `sample_size`: 기본값 3000
 - `k`: 기본값 "auto"
 
+### App Functions (앱태스크 연동)
+- **app_functions** (default: false): 앱태스크(앱함수) 연동 여부. Stage 5에 전달됨 — 상세 설명은 `/stage5-sop-to-guide` Parameters 참조
+- **app_functions_services** (default: `[]`): 연동된 앱 서비스 목록. Stage 5에 전달됨
+
 ### Optional
 - **auto_proceed** (default: true): `true` = 단계 간 자동 진행, `false` = 단계마다 확인
 - **generate_flowcharts** (default: true): Stage 4 실행 여부
@@ -73,6 +77,11 @@ Stage 7: Deployment Scenario (LLM) [~5 min]
   - If missing: run `/request-api-key` flow inline (send Channel.io message, wait for reply, write to .env)
   - MUST NOT proceed until key is confirmed valid
 - Validate: `pip install -r requirements.txt`
+- **Collect app function info**: Ask whether the client uses app task functions (앱태스크):
+  - "이 고객사는 이지어드민, 카페24, 사방넷 등 **앱태스크(앱함수) 연동**을 사용하고 있나요?"
+  - If yes: ask which services are connected (이지어드민 / 카페24 / 사방넷 / 기타)
+  - Store as `app_functions=true` and `app_functions_services=[...]`
+  - This will be passed to Stage 5 so that task planning uses app functions where applicable instead of custom code nodes
 
 ---
 
@@ -141,7 +150,9 @@ Run `/stage5-sop-to-guide` with the following **pipeline-mode overrides**:
 
 **Skip if:** `generate_alf_package=false`
 
-**Note:** Steps 3-A (cross_analysis + heatmap) and 3-B (automation_analysis) run as **intermediate inputs** for Steps 6-7, but are NOT listed as pipeline deliverables.
+**Pipeline-mode overrides passed to Stage 5:**
+- `app_functions` = value collected in Step 1 (skip stage5's own question)
+- `app_functions_services` = list collected in Step 1
 
 **Pipeline deliverables (final outputs):**
 - `results/{company}/05_sales_report/alf_setup/rules_draft.md`

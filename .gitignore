@@ -1,8 +1,16 @@
+# Claude Code
+.claude/skills/analyze-bots/
+.claude/skills/upload-documents/
+.claude/skills/upload-rules/
+
 # context
 PROGRESS.md
 CLAUDE.md
 README_ver_rosa.md
 AGENTS.md
+
+# Dependency management (pip-tools artifacts)
+requirements.lock
 
 # Python
 __pycache__/
