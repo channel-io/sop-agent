@@ -367,8 +367,8 @@ k: auto
 **Solution:**
 - You MUST check if .env file exists: `test -f .env`
 - You MUST verify API key is set: `grep UPSTAGE_API_KEY .env`
-- You MUST suggest running `/request-api-key` skill to automatically request the key via Channel.io
-- You MUST wait for user to complete `/request-api-key` flow before retrying clustering
+- If missing, instruct the user to add `UPSTAGE_API_KEY` to `.env` directly. Issue the key at https://console.upstage.ai
+- You MUST wait for the user to update `.env` before retrying clustering
 
 ### Issue: Python Dependencies Missing
 

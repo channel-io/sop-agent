@@ -73,9 +73,14 @@ Stage 7: Deployment Scenario (LLM) [~5 min]
 **Actions:**
 - Detect language from user's first message
 - Set `LANGUAGE={language}` for all Python script executions
-- Check `.env` for `UPSTAGE_API_KEY`:
-  - If missing: run `/request-api-key` flow inline (send Channel.io message, wait for reply, write to .env)
-  - MUST NOT proceed until key is confirmed valid
+- Check `.env` for required API keys:
+  - **Embedding/Tagging key (one of)**: `UPSTAGE_API_KEY` (Upstage Solar) — required for Stage 1 clustering & tagging
+  - **LLM key (one of)**: `PRISM_API_KEY` (Prism Gateway, recommended for Channel 내부 사용) **또는** `ANTHROPIC_API_KEY` (Claude API 직접 사용) — required for Stage 2~7
+  - If a required key is missing, instruct the user to add it to `.env` directly. Do NOT call `/request-api-key`.
+    - Upstage 키 발급: https://console.upstage.ai
+    - Prism 키 발급: Channel 내부 Prism Gateway에서 발급 (`PRISM_BASE_URL=https://prism.ch.dev`)
+    - Claude 키 발급: https://console.anthropic.com
+  - MUST NOT proceed until at least one embedding key (`UPSTAGE_API_KEY`) AND one LLM key (`PRISM_API_KEY` or `ANTHROPIC_API_KEY`) are present in `.env`.
 - Validate: `pip install -r requirements.txt`
 - **Collect app function info**: Ask whether the client uses app task functions (앱태스크):
   - "이 고객사는 이지어드민, 카페24, 사방넷 등 **앱태스크(앱함수) 연동**을 사용하고 있나요?"
