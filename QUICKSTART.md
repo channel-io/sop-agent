@@ -128,7 +128,7 @@ ls ~/sop-agent/results/<고객사>/
 **권장 파일:**
 - `02_extraction/response_strategies.json`
 - `05_sales_report/analysis/automation_analysis.md`
-- `04_tasks_json/TASK*.json` 또는 `04_tasks/TASK*.md`
+- `05_sales_report/tasks_json/TASK*.json` 또는 `05_sales_report/tasks/TASK*.md`
 
 **없는 경우:**
 - sop-agent를 먼저 실행해야 합니다
@@ -184,7 +184,7 @@ https://vqnol.channel.io
 - **No** → 신규 도입 케이스
 
 **Q4. ALF 태스크 JSON 있으세요?**
-- 보통 **No** → `04_tasks/*.md` 자동 파싱
+- 보통 **No** → `05_sales_report/tasks/*.md` 자동 파싱
 - JSON 파일 있으면 경로 입력
 
 **Q5. 시나리오 수?**

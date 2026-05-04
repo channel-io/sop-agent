@@ -32,7 +32,7 @@ Stage 5: ALF Implementation Package (LLM + Python) [~25 min]
       alf_implementation_guide.md, analysis_report.md
     ↓
 Stage 6: ALF Document Export (LLM) [~10 min]
-    → rules/ (individual rule files), 06_rag_documents/ (individual RAG docs)
+    → 06_alf_documents/rules/ (individual rule files), 06_alf_documents/rag/ (individual RAG docs)
     ↓
 Stage 7: Deployment Scenario (LLM) [~5 min]
     → deployment_qa_set.html, deployment_qa_set.md (+ optional Notion)
@@ -76,7 +76,7 @@ Stage 7: Deployment Scenario (LLM) [~5 min]
 - Check `.env` for required API keys:
   - **Embedding/Tagging key (one of)**: `UPSTAGE_API_KEY` (Upstage Solar) — required for Stage 1 clustering & tagging
   - **LLM key (one of)**: `PRISM_API_KEY` (Prism Gateway, recommended for Channel 내부 사용) **또는** `ANTHROPIC_API_KEY` (Claude API 직접 사용) — required for Stage 2~7
-  - If a required key is missing, instruct the user to add it to `.env` directly. Do NOT call `/request-api-key`.
+  - If a required key is missing, instruct the user to add it to `.env` directly.
     - Upstage 키 발급: https://console.upstage.ai
     - Prism 키 발급: Channel 내부 Prism Gateway에서 발급 (`PRISM_BASE_URL=https://prism.ch.dev`)
     - Claude 키 발급: https://console.anthropic.com
@@ -162,7 +162,7 @@ Run `/stage5-sop-to-guide` with the following **pipeline-mode overrides**:
 **Pipeline deliverables (final outputs):**
 - `results/{company}/05_sales_report/alf_setup/rules_draft.md`
 - `results/{company}/05_sales_report/alf_setup/rag_items.md`
-- `results/{company}/04_tasks/TASK{N}_{name}.md`
+- `results/{company}/05_sales_report/tasks/TASK{N}_{name}.md`
 - `results/{company}/{company}_api_requirements.md`
 - `results/{company}/{company}_alf_implementation_guide.md`
 - `results/{company}/05_sales_report/{company}_analysis_report.md`
@@ -186,8 +186,8 @@ Run `/stage6-alf-document-export`.
 **Skip if:** `generate_alf_export=false` or Stage 5 was skipped.
 
 **Outputs:**
-- `results/{company}/05_sales_report/alf_setup/rules/01~09_*.md` (9 individual rule files)
-- `results/{company}/06_rag_documents/*.md` (individual RAG knowledge documents)
+- `results/{company}/06_alf_documents/rules/01~09_*.md` (9 individual rule files)
+- `results/{company}/06_alf_documents/rag/*.md` (individual RAG knowledge documents)
 
 **Quality Checks:** Rule file count matches sections, RAG doc count matches rag_items
 
@@ -216,11 +216,15 @@ results/{company}/
 ├── 01_clustering/  (clustered.xlsx, tags.xlsx, messages.csv, analysis_report.md)
 ├── 02_extraction/  (patterns.json, faq.json, keywords.json, patterns_enriched.json)
 ├── 03_sop/         (HT_*.sop.md, TS_*.sop.md, metadata.json, *_FLOWCHART.md)
-├── 04_tasks/       (TASK{N}_{name}.md)
+├── 04_flowcharts/  (Stage 4 — 별도 플로우차트, 선택)
 ├── 05_sales_report/
-│   ├── alf_setup/  (rules_draft.md, rag_items.md, rules/)
+│   ├── alf_setup/  (rules_draft.md, rag_items.md)
+│   ├── tasks/      (TASK{N}_{name}.md)
+│   ├── analysis/
 │   └── {company}_analysis_report.md
-├── 06_rag_documents/  (individual RAG docs)
+├── 06_alf_documents/
+│   ├── rules/      (개별 규칙 파일 9개, ALF 등록용)
+│   └── rag/        (개별 RAG 지식 문서)
 ├── 07_deployment/  (deployment_qa_set.html, deployment_qa_set.md)
 ├── {company}_api_requirements.md
 ├── {company}_alf_implementation_guide.md

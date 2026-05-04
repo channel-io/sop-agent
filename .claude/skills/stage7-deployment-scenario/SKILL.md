@@ -43,7 +43,7 @@ Stage 1~6 산출물을 재구조화하여 **고객사 공유용 배포 시나리
 05_sales_report/analysis/cross_analysis.json  → 카테고리 빈도
 05_sales_report/alf_setup/rag_items.md        → RAG 항목 (Priority 1/2)
 {company}_api_requirements.md                 → API 필요/불필요 태스크 분류
-04_tasks/TASK*.md                             → 태스크 정의
+05_sales_report/tasks/TASK*.md                             → 태스크 정의
 02_extraction/faq.json                        → FAQ Q/A 쌍 (테스트 쿼리 소스)
 03_sop/*.sop.md                               → SOP Case 시나리오 (테스트 쿼리 소스)
 05_sales_report/analysis/automation_analysis.md → 커버리지 수치
@@ -84,7 +84,7 @@ results/{company}/07_deployment/
    - `cross_analysis.json` (REQUIRED)
    - `rag_items.md` (REQUIRED)
    - `{company}_api_requirements.md` (REQUIRED)
-   - `04_tasks/TASK*.md` (REQUIRED, at least 0 — some companies may have no tasks)
+   - `05_sales_report/tasks/TASK*.md` (REQUIRED, at least 0 — some companies may have no tasks)
    - `02_extraction/faq.json` (REQUIRED — for test queries)
    - `03_sop/*.sop.md` (REQUIRED — for test queries)
    - `automation_analysis.md` (optional — for coverage figures)
@@ -120,7 +120,7 @@ Read the source files and build the master mapping of categories to resolution m
    - Read `api_requirements.md`:
      - Section 3 "API 불필요 태스크" → **RAG** (knowledge response only) or **RAG + 상담사** (if listed as requiring agent handling)
      - Section 1 "API 필요 태스크" → **Task (API)**
-   - Read `04_tasks/TASK*.md` file list:
+   - Read `05_sales_report/tasks/TASK*.md` file list:
      - Topics with a TASK file → **Task**
      - Check each TASK: if it has API call nodes (dashed orange border in Mermaid, or listed in api_requirements Section 1) → **Task (API)** = Step 2
      - If TASK has NO API calls → **Task (단순)** = Step 1
@@ -191,7 +191,7 @@ For each **flow** (not just category) in the mapping table, generate 1-2 test qu
    - **고객사 확인 필요**: What needs to be agreed with the client (e.g., defect judgment criteria, refund authority)
 
 **For Step 2 flows (Task API):**
-1. Read the corresponding `04_tasks/TASK*.md` — extract the trigger scenario
+1. Read the corresponding `05_sales_report/tasks/TASK*.md` — extract the trigger scenario
 2. Read the corresponding `03_sop/*.sop.md` — extract Case 1 customer scenario
 3. Format as:
    - **구체적 쿼리**: Realistic customer request that triggers this task

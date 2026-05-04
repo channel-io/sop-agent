@@ -1,6 +1,6 @@
 ---
 name: stage5-sop-to-guide
-description: Generate an ALF implementation package from all pipeline outputs. Produces rules draft, RAG knowledge items, dialog type cross-analysis heatmap, automation feasibility analysis, ROI calculation, task flowcharts (04_tasks/), API requirements doc, and final ALF implementation guide. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
+description: Generate an ALF implementation package from all pipeline outputs. Produces rules draft, RAG knowledge items, dialog type cross-analysis heatmap, automation feasibility analysis, ROI calculation, task flowcharts (05_sales_report/tasks/), API requirements doc, and final ALF implementation guide. **Language:** Auto-detects Korean (한국어) or Japanese (日本語) from user input.
 ---
 
 # Stage 5: ALF 구축 패키지 생성
@@ -42,7 +42,7 @@ Step 4: Python — ROI 계산
     → sales_report_config.json + ROI 수치
     ↓
 Step 5: LLM — 태스크 정의 + API 요건 정의서
-    → 04_tasks/TASK{N}_{이름}.md   (태스크별 Mermaid 플로우차트 + 요약표)
+    → 05_sales_report/tasks/TASK{N}_{이름}.md   (태스크별 Mermaid 플로우차트 + 요약표)
     → {company}_api_requirements.md  (개발팀용 API 요건 정의서)
     ↓
 Step 6: LLM — 최종 통합 보고서 (ALF 도입 가이드)
@@ -55,7 +55,7 @@ Step 7: LLM — 최종 분석 리포트 (Rosa 프레임워크)
 **산출물 디렉토리:**
 ```
 results/{company}/
-├── 04_tasks/                              ← (Stage 5에서 생성)
+├── 05_sales_report/tasks/                              ← (Stage 5에서 생성)
 │   ├── TASK{N}_{이름}.md                  ← 태스크별 Mermaid 플로우차트 + 요약표
 │   └── TASK{N}_{이름}.svg                 ← (선택, mmdc 설치 시)
 ├── {company}_api_requirements.md          ← API 요건 정의서 (개발팀용)
@@ -397,7 +397,7 @@ python3 scripts/generate_sales_report.py \
 
 Based on the SOP and automation_analysis.md analysis results, generate two documents.
 
-#### 5-A. 04_tasks/ — Task Flowchart Files
+#### 5-A. 05_sales_report/tasks/ — Task Flowchart Files
 
 Separate scenarios that include API calls into individual task files, one file per task.
 
@@ -483,7 +483,7 @@ Separate scenarios that include API calls into individual task files, one file p
 
 SVG 생성 (mmdc 설치 시):
 ```bash
-mmdc -i results/{company}/04_tasks/TASK{N}_{이름}.md -o results/{company}/04_tasks/TASK{N}_{이름}.svg -b transparent
+mmdc -i results/{company}/05_sales_report/tasks/TASK{N}_{이름}.md -o results/{company}/05_sales_report/tasks/TASK{N}_{이름}.svg -b transparent
 ```
 
 #### 5-B. {company}_api_requirements.md — API Requirements Document
@@ -506,7 +506,7 @@ Define the APIs used in tasks so that the development team can review them.
 **Expected Output:**
 ```
 ✅ Step 5 complete
-  - 04_tasks/: TASK 파일 {X}개 생성
+  - 05_sales_report/tasks/: TASK 파일 {X}개 생성
     - 앱함수 처리: {N}개 / 코드노드 처리: {M}개 / 혼합: {K}개  [app_functions=true일 때만 출력]
   - {company}_api_requirements.md: 필수 API {X}개 / 선택 API {X}개
 ```
@@ -521,7 +521,7 @@ Compose `{company}_alf_implementation_guide.md` using all outputs.
 - `rules_draft.md`, `rag_items.md` (Step 2)
 - `cross_analysis.json`, `heatmap.png`, `automation_analysis.md` (Step 3)
 - ROI figures from Step 4 script output
-- `04_tasks/*.md`, `{company}_api_requirements.md` (Step 5)
+- `05_sales_report/tasks/*.md`, `{company}_api_requirements.md` (Step 5)
 
 **Report sections:**
 

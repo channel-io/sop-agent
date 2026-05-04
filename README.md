@@ -1,19 +1,21 @@
 # Userchat-to-SOP Pipeline
 
-Excel 고객 상담 데이터를 Agent SOP 문서 및 ALF 구축 패키지로 자동 변환하는 5단계 AI 파이프라인
+Excel 고객 상담 데이터를 Agent SOP 문서 및 ALF 구축 패키지로 자동 변환하는 7단계 AI 파이프라인
 
 ## 프로젝트 개요
 
-- **목적**: Excel 고객 상담 데이터 → 재사용 가능한 Agent SOP 문서 + ALF(AI 챗봇) 도입 패키지 자동 생성
-- **방법**: 5단계 파이프라인 (Clustering → Extraction → SOP Generation → Flowchart Generation → ALF 구축 패키지)
-- **소요 시간**: Stage 1-4 Quick ~15분 / Standard ~25분 / Comprehensive ~30분, Stage 5 ~20-35분
+- **목적**: Excel 고객 상담 데이터 → 재사용 가능한 Agent SOP 문서 + ALF(AI 챗봇) 도입 패키지 + 고객사 공유용 배포 시나리오 자동 생성
+- **방법**: 7단계 파이프라인 (Clustering → Extraction → SOP Generation → Flowchart Generation → ALF 구축 패키지 → ALF 문서 분리 → 배포 시나리오)
+- **소요 시간**: Stage 1-4 Quick ~15분 / Standard ~25분 / Comprehensive ~30분, Stage 5 ~20-35분, Stage 6-7 ~10분
 - **다국어 지원**: 한국어 (한국어), 일본어 (日本語)
 - **기술 스택**:
-  - **Stage 1 (Python)**: Upstage Solar 임베딩 + K-Means 클러스터링 + LLM Fallback 자동화
+  - **Stage 1 (Python)**: 로컬 BGE-m3-ko 임베딩(기본) + Upstage Solar fallback / K-Means 클러스터링 / Prism Gateway Claude 태깅(기본) + Upstage Solar-mini fallback
   - **Stage 2 (LLM)**: 패턴 추출 + FAQ 생성 + HT/TS 분류
   - **Stage 3 (LLM)**: Agent SOP 문서 생성 (병렬 처리 가능)
   - **Stage 4 (LLM + Mermaid)**: 플로우차트 자동 생성 (필수, SVG 선택)
-  - **Stage 5 (LLM + Python)**: ALF 구축 패키지 (규칙 초안, RAG 항목, 자동화 분석, ROI 계산, API 요건 정의서)
+  - **Stage 5 (LLM + Python)**: ALF 구축 패키지 — 규칙 초안(페르소나·말투·응대 가이드라인·공감 매핑), RAG 항목, 자동화 분석(4-Layer ALF 관여 모델), 앱함수 연동 분류(이지어드민/카페24/사방넷), ROI 계산, API 요건 정의서
+  - **Stage 6 (LLM)**: ALF 등록용 개별 파일 분리 (규칙 9개 + RAG 토픽별 문서)
+  - **Stage 7 (LLM)**: 고객사 공유용 배포 시나리오 & QA 세트 (HTML/Markdown, Notion 발행 선택)
 
 ## 빠른 시작
 
@@ -59,10 +61,9 @@ setup.sh 파일을 보고 환경 설정을 해줘. .env.example을 복사해서 
 /userchat-to-sop-pipeline
 ```
 
-- 한 번에 Stage 1-4 자동 실행
+- 한 번에 Stage 1-7 자동 실행
 - 각 단계별 리뷰 지점 제공
 - Stage 간 자동 연결 및 검증
-- 소요 시간: Quick ~15분 / Standard ~25분 / Comprehensive ~30분
 
 #### 개별 실행 (단계별 제어 필요 시)
 
@@ -72,6 +73,19 @@ setup.sh 파일을 보고 환경 설정을 해줘. .env.example을 복사해서 
 /stage3-sop-generation          # Stage 3: SOP 생성
 /stage4-flowchart-generation    # Stage 4: 플로우차트 생성
 /stage5-sop-to-guide            # Stage 5: ALF 구축 패키지 생성
+/stage6-alf-document-export     # Stage 6: ALF 문서 개별 파일 분리
+/stage7-deployment-scenario     # Stage 7: 배포 시나리오 & QA 세트
+```
+
+#### ALF 운영 보조 스킬
+
+```
+/upload-rules                   # 규칙 Markdown 일괄 업로드 (Channel.io)
+/upload-documents               # RAG 문서 일괄 업로드 (Channel.io Desk API)
+/settings-task                  # Task JSON 채널톡 업로드(생성/수정)
+/evaluate-rag                   # 봇의 RAG 응답 품질 자동 테스트 (Playwright)
+/evaluate-task                  # Task JSON 품질 평가
+/analyze-bots                   # Non-ALF 봇 행동 분석 (커버리지/에스컬레이션)
 ```
 
 #### CLI 직접 실행 (Stage 1)
@@ -132,20 +146,30 @@ results/{company}/
 │   ├── generation_summary.md             #   생성 요약
 │   └── flowchart_generation_summary.md   #   플로우차트 요약
 │
-├── 04_tasks/                             # Stage 5: 태스크 플로우차트
-│   ├── TASK{N}_{이름}.md                 #   태스크별 Mermaid 플로우차트
-│   └── TASK{N}_{이름}.svg               #   SVG 이미지 (선택)
-│
-├── 05_sales_report/                      # Stage 5: 분석/보고서
+├── 05_sales_report/                      # Stage 5: ALF 패키지 + 분석/보고서
 │   ├── alf_setup/
 │   │   ├── rules_draft.md                #   규칙 초안 (시스템 프롬프트)
 │   │   └── rag_items.md                  #   RAG 지식 DB 등록 항목
+│   ├── tasks/                            #   태스크 플로우차트
+│   │   ├── TASK{N}_{이름}.md             #     태스크별 Mermaid 플로우차트
+│   │   └── TASK{N}_{이름}.svg            #     SVG 이미지 (선택)
 │   ├── analysis/
 │   │   ├── cross_analysis.json           #   교차분석 원시 데이터
 │   │   ├── heatmap.png                   #   상담주제 × 대화유형 히트맵
 │   │   └── automation_analysis.md        #   자동화 가능성 분석
 │   ├── sales_report_config.json          #   ROI 계산 설정
 │   └── {company}_analysis_report.md      #   최종 분석 리포트 (Rosa 프레임워크)
+│
+├── 06_alf_documents/                     # Stage 6: ALF 등록용 개별 파일
+│   ├── rules/                            #   개별 규칙 파일 9개 (≤2,000자)
+│   │   ├── 01_tone_manner.md
+│   │   └── ... (02~09)
+│   └── rag/                              #   RAG 지식 문서 (토픽별)
+│       └── {토픽}.md
+│
+├── 07_deployment/                        # Stage 7: 배포 시나리오 & QA
+│   ├── deployment_qa_set.html            #   고객사 공유용
+│   └── deployment_qa_set.md              #   로컬 보관용
 │
 ├── {company}_api_requirements.md         # Stage 5: API 요건 정의서
 └── {company}_alf_implementation_guide.md # Stage 5: 최종 ALF 도입 가이드
@@ -164,8 +188,7 @@ results/{company}/
 │       ├── stage3-sop-generation/   #   Stage 3 Skill
 │       ├── stage4-flowchart-generation/ # Stage 4 Skill
 │       ├── stage5-sop-to-guide/     #   Stage 5 Skill
-│       ├── userchat-to-sop-pipeline/ #  통합 파이프라인 Skill
-│       └── request-api-key/         #   API 키 요청 Skill
+│       └── userchat-to-sop-pipeline/ #  통합 파이프라인 Skill
 ├── agent-sops/                      # Agent SOP 정의서
 │   ├── stage1-clustering.sop.md
 │   ├── stage2-extraction.sop.md
@@ -217,7 +240,9 @@ results/{company}/
 Excel Input (고객 상담 데이터)
   ↓
 Stage 1: Clustering (Python)
-  → Upstage Solar 임베딩 + K-Means 클러스터링 + LLM 태깅
+  → 임베딩: 로컬 BGE-m3-ko 우선 → Upstage Solar fallback
+  → K-Means 클러스터링 (silhouette 기반 최적 K 자동 선택)
+  → 태깅: Prism Gateway Claude 우선 → Upstage Solar-mini fallback
   → clustered.xlsx, tags.xlsx, messages.csv, analysis_report.md
   ↓
 Stage 2: Pattern Extraction (LLM)
@@ -235,13 +260,21 @@ Stage 4: Flowchart Generation (LLM + Mermaid)
 Stage 5: ALF Implementation Package (LLM + Python)
   → 규칙 초안, RAG 항목, 교차분석 히트맵, 자동화 분석
   → ROI 계산, 태스크 플로우차트, API 요건, ALF 도입 가이드
+  ↓
+Stage 6: ALF Document Export (LLM)
+  → rules_draft.md → 개별 규칙 파일 9개 (≤2,000자)
+  → rag_items.md → 토픽별 RAG 지식 문서 (ALF 등록 직행)
+  ↓
+Stage 7: Deployment Scenario (LLM)
+  → 상담 카테고리 × 해결 방식(RAG/Task) 매핑 + 카테고리별 테스트 쿼리
+  → deployment_qa_set.html / .md (+ Notion 발행 선택)
 ```
 
 ## Claude Code Skills
 
 ### `/userchat-to-sop-pipeline`
-**통합 파이프라인 (Stage 1-4 자동 실행, 권장)**
-- 한 번에 전체 4단계 파이프라인 실행
+**통합 파이프라인 (Stage 1-7 자동 실행, 권장)**
+- 한 번에 전체 7단계 파이프라인 실행
 - Stage 간 자동 연결 및 검증
 - 각 단계별 리뷰 지점 제공 (auto_proceed 옵션)
 - 파라미터 커스터마이제이션 (Quick/Standard/Comprehensive)
@@ -250,6 +283,8 @@ Stage 5: ALF Implementation Package (LLM + Python)
 대화형 Stage 1 실행 - 파라미터 선택 가이드 제공
 - 데이터 파일 자동 스캔 및 선택
 - 회사명 자동 추출
+- 임베딩: **로컬 BGE-m3-ko 우선 → Upstage Solar fallback** (MPS/CUDA/CPU 자동 선택)
+- 태깅: **Prism Gateway Claude 우선 → Upstage Solar-mini fallback**
 - LLM Fallback 자동 감지 (≥20%)
 - 배치 처리 (50개씩)
 
@@ -273,14 +308,24 @@ Mermaid 플로우차트 자동 생성
 
 ### `/stage5-sop-to-guide`
 ALF 구축 패키지 생성 (Stage 1-4 산출물 기반)
-- 규칙 초안 + RAG 지식 DB 항목
+- 규칙 초안 — 페르소나 / 말투 규칙 / 응대 가이드라인 8개 / 감정별 공감 매핑
+- RAG 지식 DB 항목
 - 대화유형 교차분석 히트맵
-- 자동화 가능성 분석 + ROI 계산
-- 태스크 플로우차트 + API 요건 정의서
-- 최종 ALF 도입 가이드
+- 자동화 가능성 분석 — **4-Layer ALF 관여 모델** (완전 해결 / 승인노드 / 초벌 상담 / 주제 분류)
+- ROI 계산 — `monthly_volume`은 Stage 1 데이터(원본 건수 ÷ 날짜 범위)에서 자동 추정
+- 태스크 플로우차트 — `app_functions=true` 시 **앱함수 연동 분류**(이지어드민/카페24/사방넷 함수 스펙 기반, 앱함수/코드노드/혼합)
+- API 요건 정의서 + 최종 ALF 도입 가이드
 
-### `/request-api-key`
-Upstage API 키 요청 (Channel.io 경유)
+### `/stage6-alf-document-export`
+ALF 등록용 개별 파일 분리
+- `rules_draft.md` → 9개 규칙 파일 (각 ≤2,000자, 페르소나·말투·응대·공감 등 카테고리별)
+- `rag_items.md` → 토픽별 RAG 지식 문서
+
+### `/stage7-deployment-scenario`
+고객사 공유용 배포 시나리오 & QA 세트
+- 상담 카테고리 ↔ 해결 방식(RAG/Task) ↔ 배포 단계 매핑
+- 카테고리별 테스트 쿼리 자동 생성
+- HTML + Markdown 출력, Notion 발행 선택
 
 ## SOP 템플릿
 
@@ -298,9 +343,9 @@ Stage 2에서 각 클러스터를 자동으로 HT/TS로 분류하고, Stage 3에
 
 | 구분 | 기술 | 용도 |
 |------|------|------|
-| **임베딩** | Upstage Solar `embedding-passage` (4096차원) | 텍스트 벡터화 |
+| **임베딩** | `dragonkue/BGE-m3-ko` (로컬, 기본) / Upstage Solar `embedding-passage` (fallback) | 텍스트 벡터화 |
 | **클러스터링** | scikit-learn K-Means | 상담 데이터 분류 |
-| **LLM** | Claude API (우선), Upstage Solar-mini (fallback) | 태깅, 패턴 추출, SOP 생성, 분석 |
+| **LLM** | Claude (Prism Gateway 우선, Anthropic API 직접 호출 가능) / Upstage Solar-mini (fallback) | 태깅, 패턴 추출, SOP 생성, 분석 |
 | **플로우차트** | Mermaid.js + @mermaid-js/mermaid-cli | 시각화 |
 | **데이터 처리** | pandas, numpy, openpyxl | Excel I/O |
 | **시각화** | matplotlib | 히트맵 생성 |
@@ -310,10 +355,21 @@ Stage 2에서 각 클러스터를 자동으로 HT/TS로 분류하고, Stage 3에
 ## 환경 변수
 
 ```bash
-# 둘 중 하나 이상 필요
-UPSTAGE_API_KEY=up_...     # Upstage Solar API (임베딩 + LLM 태깅)
-ANTHROPIC_API_KEY=sk-ant_... # Claude API (LLM 우선 사용)
+# 임베딩 (Stage 1) — 둘 다 선택
+#   - 로컬 BGE-m3-ko가 기본 (sentence-transformers 설치 시 자동 사용)
+#   - 미설치 시 아래 키로 Upstage Solar API fallback
+UPSTAGE_API_KEY=up_...                                # Solar 임베딩 + Solar-mini 태깅 fallback
+
+# LLM (Stage 1 태깅 + Stage 2-7) — 아래 중 하나 선택, Prism 권장
+PRISM_API_KEY=...                                     # Prism Gateway (Channel 내부)
+PRISM_BASE_URL=https://prism.ch.dev
+ANTHROPIC_MODEL=anthropic/claude-sonnet-4-20250514
+
+ANTHROPIC_API_KEY=sk-ant_...                          # 또는 Claude API 직접 사용
 ```
+
+> **Prism Gateway**: 사내 Channel 환경에서 Anthropic SDK를 `base_url`로 우회 호출하기 위한 게이트웨이. `PRISM_API_KEY`가 설정되어 있으면 자동으로 Prism 경유로 전환됩니다.
+> **로컬 임베딩**: `pip install sentence-transformers` 시 BGE-m3-ko가 자동 활성화됩니다 (Mac MPS / CUDA / CPU 자동 선택). 미설치 환경에서는 `UPSTAGE_API_KEY`로 자동 fallback.
 
 ## 문제 해결
 

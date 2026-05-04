@@ -2,6 +2,11 @@
 .claude/skills/analyze-bots/
 .claude/skills/upload-documents/
 .claude/skills/upload-rules/
+.claude/scheduled_tasks.lock
+
+# 임시/일회성 스크립트는 여기에 두면 git에 추적되지 않음
+scripts/scratch/*
+!scripts/scratch/.gitkeep
 
 # context
 PROGRESS.md
