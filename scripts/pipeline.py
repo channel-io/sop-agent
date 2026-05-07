@@ -42,7 +42,9 @@ def main():
     parser.add_argument('--umap', action='store_true', default=True, help='UMAP 차원 축소 적용 (기본: 활성화)')
     parser.add_argument('--no-umap', action='store_true', help='UMAP 비활성화 (원본 4096D로 클러스터링)')
     parser.add_argument('--umap-components', type=int, default=30, help='UMAP 목표 차원 수 (기본: 30)')
-    
+    parser.add_argument('--include-phone', action='store_true',
+                        help='전화 상담(mediumType=phone/meet) 포함 (기본: 제외)')
+
     args = parser.parse_args()
 
     # Handle skip-tagging flag
@@ -64,7 +66,7 @@ def main():
     print(f"   샘플: {sample_size if sample_size else '전체'}개")
 
     print_header("1️⃣ 데이터 로딩...")
-    df_chat, df_msg = load_data(args.input, sample_size)
+    df_chat, df_msg = load_data(args.input, sample_size, exclude_phone=not args.include_phone)
     print(f"   UserChat: {len(df_chat):,}개, Message: {len(df_msg):,}개")
 
     print_header("2️⃣ 텍스트 향상...")

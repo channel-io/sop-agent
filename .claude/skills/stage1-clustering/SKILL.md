@@ -112,12 +112,19 @@ Run the Python clustering script with Solar-pro agent tagging and monitor execut
 - You MAY offer to retry with different parameters if clustering fails
 
 
+**Phone consultation exclusion:**
+- Records with `mediumType ∈ {phone, meet}` are filtered out automatically before sampling (default behavior in `load_data()`).
+- The script logs the excluded count (e.g., `전화 상담 제외: 1,556건 → ...`). Treat the post-exclusion count as the working dataset size.
+- To include phone consultations exceptionally, pass `--include-phone` to `scripts/pipeline.py`.
+
 **Expected Outputs:**
 ```
 Customer Support Chat Clustering Pipeline
 =====================================================
 
 [1/6] Loading data...
+   원본: UserChat 4,823건, Message 38,705건
+   전화 상담 제외: 1,556건 → UserChat 3,267건, Message 15,517건
 ✓ Loaded 1,000 records
 
 [2/6] Enhancing text...
@@ -415,6 +422,10 @@ This SOP requires:
 - Upstage Solar API key (for embeddings and optional tagging)
 - Excel input file with specific sheet structure
 - File system access for reading/writing
+
+### Data Filtering
+
+Phone consultations (`mediumType ∈ {phone, meet}`) are excluded by default at data load time. Stage 2~7 inherit the filtered dataset since they consume Stage 1 outputs. Use `--include-phone` to opt out.
 
 ### Output for Stage 2
 

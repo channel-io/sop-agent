@@ -2,13 +2,17 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def load_data(filepath, sample_size=None):
+EXCLUDED_MEDIUM_TYPES = {'phone', 'meet'}
+
+
+def load_data(filepath, sample_size=None, exclude_phone=True):
     """
     Excel 파일에서 UserChat 및 Message 데이터 로딩
 
     Args:
         filepath: Excel 파일 경로
         sample_size: 샘플링 크기 (None이면 전체 데이터)
+        exclude_phone: True면 mediumType이 'phone'/'meet'인 전화 상담 제외 (기본: True)
 
     샘플링 전략 (sample_size 지정 시):
         - first_message 길이 기준으로 정렬 (긴 것 우선)
@@ -22,6 +26,18 @@ def load_data(filepath, sample_size=None):
     df_msg = pd.read_excel(xl, sheet_name='Message data')
 
     print(f"   원본: UserChat {len(df_chat):,}건, Message {len(df_msg):,}건")
+
+    if exclude_phone and 'mediumType' in df_chat.columns:
+        before = len(df_chat)
+        phone_mask = df_chat['mediumType'].isin(EXCLUDED_MEDIUM_TYPES)
+        excluded = int(phone_mask.sum())
+        if excluded > 0:
+            df_chat = df_chat[~phone_mask].copy()
+            chat_ids = set(df_chat['id'].tolist())
+            df_msg = df_msg[df_msg['chatId'].isin(chat_ids)].copy()
+            print(f"   전화 상담 제외: {excluded:,}건 → UserChat {len(df_chat):,}건, Message {len(df_msg):,}건")
+        else:
+            print(f"   전화 상담 없음 (mediumType 기준)")
 
     if sample_size and sample_size < len(df_chat):
         print(f"   샘플링 전략: first_message 길이 기준 정렬")
